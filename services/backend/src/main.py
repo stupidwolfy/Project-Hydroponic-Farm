@@ -15,7 +15,7 @@ app = FastAPI()
 
 
 @app.get("/")
-def read_root():
+def home():
     return {"Hello": "World"}
 
 @app.get("/pumpA/{power}")
