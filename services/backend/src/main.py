@@ -1,6 +1,10 @@
 from typing import Optional
 from fastapi import FastAPI
 
+import io
+from starlette.responses import StreamingResponse
+from src import CamHandler
+
 import RPi.GPIO as GPIO
 
 pumpA_GPIO = 17
@@ -35,3 +39,8 @@ def pumpB_pow(power: bool):
     else:
         GPIO.output(pumpB_GPIO, 0)   
     return {"pumpB": power}
+
+@app.get("/cam")
+def cam_endpoint():
+    im_png = GetImage()
+    return StreamingResponse(io.BytesIO(im_png.tobytes()), media_type="image/png")
