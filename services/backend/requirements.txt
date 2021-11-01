@@ -1,4 +1,6 @@
 fastapi==0.68.0
 uvicorn==0.14.0
-RPi.GPIO==0.7.0
-opencv-contrib-python==4.5.3.56
+RPi.GPIO
+#numpy
+#opencv-python===3.4.13.47
+#adafruit-ads1x15

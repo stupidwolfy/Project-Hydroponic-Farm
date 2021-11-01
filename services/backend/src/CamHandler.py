@@ -7,4 +7,3 @@ def GetImage():
     cap.release()
     if ret:
     	return cv2.imencode(".png", frame)
-    
