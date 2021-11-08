@@ -1,6 +1,8 @@
 fastapi==0.68.0
 uvicorn==0.14.0
+starlette
 RPi.GPIO
-#numpy
-#opencv-python===3.4.13.47
-#adafruit-ads1x15
+imutils
+#numpy #installed with apt-get
+#opencv-python===3.4.13.47 #installed with apt-get
+adafruit-ads1x15

@@ -6,4 +6,5 @@ def GetImage():
     ret, frame = cap.read()
     cap.release()
     if ret:
-    	return cv2.imencode(".png", frame)
+        (flag, encodedImage) = cv2.imencode(".jpg", frame)
+    return encodedImage

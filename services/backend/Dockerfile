@@ -6,7 +6,8 @@ WORKDIR /app
 RUN apt-get -y update && apt-get -y upgrade
 RUN apt-get -y install python3 \
     python3-pip \
-    python3-opencv
+    libgtk2.0-dev \
+    python3-opencv 
 
 # See https://github.com/waveform80/picamera/issues/578
 ENV READTHEDOCS=True

@@ -1,47 +1,63 @@
 from typing import Optional
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
 import io
-from fastapi.responses import FileResponse
-from src import CamHandler
-
+from starlette.responses import StreamingResponse
 import RPi.GPIO as GPIO
+import cv2
 
-pumpA_GPIO = 17
-pumpB_GPIO = 27
+from src import CamHandler, ADS1x15Manager, RelayManager, SwitchManager
 
-GPIO.setmode(GPIO.BCM)   
+pumps = []
+adcs = []
+Switchs = []
 
-GPIO.setup(pumpA_GPIO, GPIO.OUT)  
-GPIO.setup(pumpB_GPIO, GPIO.OUT)  
+pumpA = RelayManager.Relay('Pump A', id=pumps.count, pin=17)
+pumps.append(pumpA)
+pumpB = RelayManager.Relay('Pump B', id=pumps.count, pin=27)
+pumps.append(pumpB)
+
+adc = ADS1x15Manager.ADS1115("adc A", id=adcs.count) # i2c pin, default address
+adcs.append(adc)
+
+waterLMSW = SwitchManager.Switch("Water LMSW", id=Switchs.count, pin=18)
+Switchs.append(waterLMSW)
 
 app = FastAPI()
-
 
 @app.get("/")
 def home():
     return {"Hello": "World"}
 
-@app.get("/pumpA/{power}")
-def pumpA_pow(power: bool):
-    #Pump A code
-    if power:
-        GPIO.output(pumpA_GPIO, 1)   
-    else:
-        GPIO.output(pumpA_GPIO, 0)   
-    return {"pumpA": power}
+@app.get("/manager")
+def device_manager():
+    return {"Hello": "ssss"}
 
-@app.get("/pumpB/{power}")
-def pumpB_pow(power: bool):
-    #Pump B on code
-    if power:
-        GPIO.output(pumpB_GPIO, 1)   
-    else:
-        GPIO.output(pumpB_GPIO, 0)   
-    return {"pumpB": power}
+#@app.get("/pump/add", )
+#def pumpA_pow(new_pump: RelayManager.Relay):
+#    ## %Todo Add dynamic create new pump
+#    return {"status":"Pump xxx added", "new_pump":new_pump.name}
+
+@app.get("/pump/{number}/{power}")
+def pump_pow(number: int, power: bool):
+    try:
+        #Pumps code
+        if power:
+            pumps[number].ON()
+        else:
+            pumps[number].OFF()
+        return {pumps[number].name: power}
+    except IndexError:
+        raise HTTPException(status_code=404, detail="Item not found")
+
+@app.get("/pump/{number}")
+def pump_state(number: int):
+    try:
+        return {pumps[number].name:pumps[number].isON}
+    except IndexError:
+        raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/cam")
-def cam_endpoint():
-    im_png = CamHandler.GetImage()
-    #return StreamingResponse(io.BytesIO(im_png.tobytes()), media_type="image/png")
-    return FileResponse(im_png)
+def cam_stillImage():
+    live_img = CamHandler.GetImage()
+    return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
