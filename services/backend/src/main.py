@@ -1,5 +1,6 @@
 from typing import Optional
 from fastapi import FastAPI, HTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 import io
 from starlette.responses import StreamingResponse
@@ -25,12 +26,24 @@ Switchs.append(waterLMSW)
 
 app = FastAPI()
 
+origins = [
+    "http://localhost:8080/"
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 @app.get("/")
-def home():
+async def home():
     return {"Hello": "World"}
 
 @app.get("/manager")
-def device_manager():
+async def device_manager():
     return {"Hello": "ssss"}
 
 #@app.get("/pump/add", )
@@ -39,7 +52,7 @@ def device_manager():
 #    return {"status":"Pump xxx added", "new_pump":new_pump.name}
 
 @app.get("/pump/{number}/{power}")
-def pump_pow(number: int, power: bool):
+async def pump_pow(number: int, power: bool):
     try:
         #Pumps code
         if power:
@@ -51,13 +64,13 @@ def pump_pow(number: int, power: bool):
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/pump/{number}")
-def pump_state(number: int):
+async def pump_state(number: int):
     try:
         return {pumps[number].name:pumps[number].isON}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/cam")
-def cam_stillImage():
+async def cam_stillImage():
     live_img = CamHandler.GetImage()
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")

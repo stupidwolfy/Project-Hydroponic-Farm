@@ -14,3 +14,12 @@ services:
       options:
         max-size: "10m"
     privileged: true
+
+
+  frontend:
+    build: ./services/frontend
+    volumes:
+      - './services/frontend:/app'
+      - '/app/node_modules'
+    ports:
+      - 8080:8080
