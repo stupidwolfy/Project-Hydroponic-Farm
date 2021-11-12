@@ -27,7 +27,7 @@ Switchs.append(waterLMSW)
 app = FastAPI()
 
 origins = [
-    "http://localhost:8080/"
+    "http://localhost:8080/",
 ]
 
 app.add_middleware(
@@ -37,6 +37,7 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 @app.get("/")
 async def home():
