@@ -1,3 +1,9 @@
 fastapi==0.68.0
 uvicorn==0.14.0
-RPi.GPIO==0.7.0
+starlette
+RPi.GPIO
+imutils
+#numpy #installed with apt-get
+#opencv-python===3.4.13.47 #installed with apt-get
+adafruit-ads1x15
+pydantic==1.8.2
