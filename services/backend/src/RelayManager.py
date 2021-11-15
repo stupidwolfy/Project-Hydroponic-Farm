@@ -31,10 +31,10 @@ class Relay:
         GPIO.output(self.pin, state)   
     
     def isON(self):
-        if (self.activeLOW is True):
-            return GPIO.input(self.pin) == GPIO.LOW
+        if (self.activeLOW == True):
+            return GPIO.input(self.pin) == 0
         else:
-            return GPIO.input(self.pin) == GPIO.HIGH
+            return GPIO.input(self.pin) == 1
 
     def getState(self):
         return GPIO.input(self.pin)
