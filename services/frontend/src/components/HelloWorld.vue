@@ -1,7 +1,9 @@
 <template>
-  <div>
-    <p>{{ msg }}</p>
-  </div>
+<MDBContainer>
+    <MDBRow>
+      <MDBCol>{{ msg }}</MDBCol>
+    </MDBRow>
+  </MDBContainer>
 </template>
 
 <script>

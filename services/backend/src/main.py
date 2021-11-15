@@ -21,7 +21,7 @@ pumps.append(pumpB)
 adc = ADS1x15Manager.ADS1115("adc A", id=adcs.count) # i2c pin, default address
 adcs.append(adc)
 
-waterLMSW = SwitchManager.Switch("Water LMSW", id=Switchs.count, pin=18)
+waterLMSW = SwitchManager.Switch("Water LMSW", id=Switchs.count, pin=18,testmode=True)
 Switchs.append(waterLMSW)
 
 app = FastAPI()
@@ -70,6 +70,14 @@ async def pump_state(number: int):
         return {pumps[number].name:pumps[number].isON}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
+
+@app.get("/switch/{number}")
+async def pump_state(number: int):
+    try:
+        return {Switchs[number].name:Switchs[number].isON}
+    except IndexError:
+        raise HTTPException(status_code=404, detail="Item not found")
+
 
 @app.get("/cam")
 async def cam_stillImage():
