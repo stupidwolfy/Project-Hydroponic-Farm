@@ -110,4 +110,3 @@ async def cam_stillImage():
 async def cam_stillImage():
     live_img = CamHandler.GetImage()
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
-

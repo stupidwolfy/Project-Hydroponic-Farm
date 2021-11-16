@@ -1,4 +1,5 @@
 fastapi==0.68.0
+fastapi-utils == 0.2.1 
 uvicorn==0.14.0
 starlette
 RPi.GPIO
