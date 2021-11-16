@@ -1,5 +1,6 @@
 from typing import Optional
 from fastapi import FastAPI, HTTPException
+from fastapi_utils.tasks import repeat_every
 from fastapi.middleware.cors import CORSMiddleware
 
 import random
@@ -14,6 +15,8 @@ from src import CamHandler, ADS1x15Manager, RelayManager, SwitchManager
 relays = []
 adcs = []
 Switchs = []
+
+tempData = []
 
 pumpA = RelayManager.Relay('Pump A', id=relays.count, pin=17)
 relays.append(pumpA)
@@ -87,6 +90,10 @@ async def pump_state(number: int):
 async def cam_stillImage():
     return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
 
+@app.get("/sensor/temp/raw")
+async def cam_stillImage():
+    return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
+
 @app.get("/sensor/water_temp")
 async def cam_stillImage():
     return {"temp": round(random.uniform(25, 26), 1)}
@@ -103,3 +110,4 @@ async def cam_stillImage():
 async def cam_stillImage():
     live_img = CamHandler.GetImage()
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
+
