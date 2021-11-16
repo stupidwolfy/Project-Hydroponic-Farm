@@ -79,7 +79,7 @@ async def pump_state(number: int):
 @app.get("/switch/{number}")
 async def pump_state(number: int):
     try:
-        return {Switchs[number].name:Switchs[number].getState == 0}
+        return {"name":Switchs[number].name, "value":Switchs[number].getState == 0}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
 
@@ -97,7 +97,7 @@ async def cam_stillImage():
 
 @app.get("/sensor/ec")
 async def cam_stillImage():
-    return {"ec(dS/m)": round(random.uniform(1.6, 1.9), 2)} #dS/m
+    return {"ec": round(random.uniform(1.6, 1.9), 2), "unit": "(dS/m)"} #dS/m
 
 @app.get("/cam")
 async def cam_stillImage():

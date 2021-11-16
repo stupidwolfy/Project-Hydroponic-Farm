@@ -2,7 +2,6 @@
   <div class="home">
     <HelloWorld/>
     <VueBootstrapCharts/>
-    <VueBootstrapNotifications/>
     <ToggleSwitch/>
   </div>
 </template>
@@ -11,7 +10,6 @@
 // @ is an alias to /src
 import HelloWorld from '@/components/HelloWorld.vue'
 import VueBootstrapCharts from '@/components/VueBootstrapCharts.vue'
-import VueBootstrapNotifications from '@/components/VueBootstrapNotifications.vue'
 //import ToggleSwitch from '@/components/ToggleSwitch.vue'
 
 export default {
@@ -19,7 +17,6 @@ export default {
   components: {
     HelloWorld,
     VueBootstrapCharts,
-    VueBootstrapNotifications,
     //ToggleSwitch
   }
 }
