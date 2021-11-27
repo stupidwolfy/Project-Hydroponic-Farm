@@ -1,5 +1,5 @@
 <template>
-<MDBContainer>
+  <mdbContainer>
     <MDBRow>
       <MDBCol>Temp = {{ temp }}C | </MDBCol>
       <MDBCol>Humid = {{ humid }} % | </MDBCol>
@@ -8,14 +8,16 @@
       <MDBCol>EC = {{ ec }} | </MDBCol>
       <MDBCol>{{ sw[0].name }}  = {{ sw[0].value }} </MDBCol>
     </MDBRow>
-  </MDBContainer>
+  </mdbContainer>
 </template>
 
 <script>
 import axios from 'axios';
+import { mdbContainer, MDBRow, MDBCol } from "mdbvue";
 
 export default {
   name: 'msg',
+  components: { mdbContainer, MDBRow, MDBCol},
   data() {
     return {
       msg: 'err',
