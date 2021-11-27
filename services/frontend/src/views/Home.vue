@@ -2,6 +2,7 @@
   <div class="home">
     <HelloWorld/>
     <TempCharts/>
+    <img :src="'http://192.168.1.11:5000/cam'">
   </div>
 </template>
 
