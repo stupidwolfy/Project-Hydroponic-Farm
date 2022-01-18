@@ -61,7 +61,7 @@ async def device_manager():
 #    return {"status":"Pump xxx added", "new_pump":new_pump.name}
 
 @app.get("/relay/{number}/{power}")
-async def pump_pow(number: int, power: bool):
+async def relay_control(number: int, power: bool):
     try:
         #Pumps code
         if power:
@@ -80,33 +80,33 @@ async def pump_state(number: int):
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/switch/{number}")
-async def pump_state(number: int):
+async def switch_state(number: int):
     try:
         return {"name":Switchs[number].name, "value":Switchs[number].getState == 0}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/sensor/temp")
-async def cam_stillImage():
+async def get_temp():
     return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
 
 @app.get("/sensor/temp/raw")
-async def cam_stillImage():
+async def get_temp_raw():
     return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
 
 @app.get("/sensor/water_temp")
-async def cam_stillImage():
+async def get_water_temp():
     return {"temp": round(random.uniform(25, 26), 1)}
 
 @app.get("/sensor/ph")
-async def cam_stillImage():
+async def get_ph():
     return {"ph": round(random.uniform(6.0, 7.0), 2)}
 
 @app.get("/sensor/ec")
-async def cam_stillImage():
+async def get_ec():
     return {"ec": round(random.uniform(1.6, 1.9), 2), "unit": "(dS/m)"} #dS/m
 
 @app.get("/cam")
-async def cam_stillImage():
+async def get_image():
     live_img = CamHandler.GetImage(180)
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
