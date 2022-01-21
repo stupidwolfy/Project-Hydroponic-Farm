@@ -23,8 +23,8 @@ tempData = []
 
 db = DBManager.SqlLite("Sensor_history")
 
-db.Create("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
-db.Create("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
+db.CreateDataTable("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
+db.CreateDataTable("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
 
 #test add new record
 db.Append("Garden_A_Sensor", [25, 50, 6.2, 2.22, 28, 0])

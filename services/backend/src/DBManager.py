@@ -29,7 +29,7 @@ class SqlLite:
         self.Exe(exeStr)
         return cur.fetchall()
 
-    def Create(self, tableName, tableHeaders):
+    def CreateDataTable(self, tableName, tableHeaders):
         cur =  self.con.cursor()
         cur.execute("create table if not exists "+ tableName +"(" +','.join(tableHeaders)+")")
         
@@ -41,3 +41,32 @@ class SqlLite:
 
         if autoCommit:
             self.Commit()
+
+    def GetRecords(self, tableName, firstID = -1, lastID = -1):
+        cur = self.con.cursor()
+        #cur.row_factory = lambda cursor, row: row[0] #Prefer list instread of tuple
+
+        sql = "SELECT * FROM " + tableName
+
+        if firstID > -1 or lastID > -1:
+            sql += " WHERE"
+
+            if firstID > -1 and lastID == -1:
+                sql+= " rowid >=? "
+                cur.execute(sql, [firstID])
+
+            elif firstID == -1 and lastID > -1:
+                sql+= " rowid <=? "
+                cur.execute(sql, [lastID])
+                
+            elif firstID > -1 and lastID > -1:
+                sql+= " rowid BETWEEN ? AND ?"
+                cur.execute(sql, [firstID, lastID])
+
+        else:
+            cur.execute(sql)
+        rows = cur.fetchall()
+
+        return rows
+        
+        
