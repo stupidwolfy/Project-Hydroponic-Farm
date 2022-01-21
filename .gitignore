@@ -1,4 +1,8 @@
+#DB path
+services/backend/src/DB
+
 #Python
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

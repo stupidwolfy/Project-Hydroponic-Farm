@@ -1,3 +1,4 @@
+import dbm
 from typing import Optional
 from fastapi import FastAPI, HTTPException
 from fastapi_utils.tasks import repeat_every
@@ -5,18 +6,28 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import random
 import io
+#from services.backend.src import ADCManager
 from starlette.responses import StreamingResponse
 import RPi.GPIO as GPIO
 import cv2
 import json
 
-from src import CamHandler, ADS1x15Manager, RelayManager, SwitchManager
+from src import ADCManager, CamHandler, RelayManager, SwitchManager, DBManager
 
+# init
 relays = []
 adcs = []
 Switchs = []
 
 tempData = []
+
+db = DBManager.SqlLite("Sensor_history")
+
+db.Create("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
+db.Create("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
+
+#test add new record
+db.Append("Garden_A_Sensor", [25, 50, 6.2, 2.22, 28, 0])
 
 pumpA = RelayManager.Relay('Pump A', id=relays.count, pin=17)
 relays.append(pumpA)
@@ -26,7 +37,7 @@ relays.append(pumpB)
 led = RelayManager.Relay('led', id=relays.count, pin=22)
 relays.append(led)
 
-adc = ADS1x15Manager.ADS1115("adc A", id=adcs.count) # i2c pin, default address
+adc = ADCManager.ADS1115("adc A", id=adcs.count) # i2c pin, default address
 adcs.append(adc)
 
 waterLMSW = SwitchManager.Switch("Water LMSW", id=Switchs.count, pin=18,testmode=True)
@@ -46,7 +57,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
+# Main Fastapi 
 @app.get("/")
 async def home():
     return {"Hello": "World"}
