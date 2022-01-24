@@ -66,8 +66,12 @@ class SqlLite:
 
         else:
             cur.execute(sql)
+
+        colNames = [member[0] for member in cur.description]
         rows = cur.fetchall()
 
-        return rows
+        dataTable = {"column": colNames, "data": rows}
+
+        return dataTable
         
         
