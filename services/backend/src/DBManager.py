@@ -1,6 +1,8 @@
 import sqlite3
 from datetime import datetime, timezone
 
+from numpy import empty
+
 class SqlLite:
     def __init__(self, name, isMem=False):
         self.name = name
@@ -10,10 +12,13 @@ class SqlLite:
         else:
             self.con = sqlite3.connect('./src/DB/' +name+'.db')
 
-    def Refresh(self):
+    def Close(self):
         cur =  self.con.cursor()
         cur.close()
         self.con.close()
+
+    def Refresh(self):
+        self.Close()
 
         self.con = sqlite3.connect(":memory:" if self.isMem else './src/DB/' +self.name+'.db')
     
@@ -21,13 +26,20 @@ class SqlLite:
         cur =  self.con.cursor()
         cur.execute(exeStr)
 
+        #cur.close()
+
     def Commit(self):
         self.con.commit()
+        self.con.cursor().close()
 
     def Fetch(self, exeStr):
         cur = self.con.cursor()
         self.Exe(exeStr)
-        return cur.fetchall()
+
+        rows = cur.fetchall()
+        cur.close()
+
+        return rows
 
     def CreateDataTable(self, tableName, tableHeaders):
         cur =  self.con.cursor()
@@ -43,35 +55,45 @@ class SqlLite:
         if autoCommit:
             self.Commit()
 
-    def GetRecords(self, tableName, firstID = -1, lastID = -1):
+    def GetRecords(self, tableName=None, firstID = -1, lastID = -1):
         cur = self.con.cursor()
-        #cur.row_factory = lambda cursor, row: row[0] #Prefer list instread of tuple
-
-        sql = "SELECT * FROM " + tableName
-
-        if firstID > -1 or lastID > -1:
-            sql += " WHERE"
-
-            if firstID > -1 and lastID == -1:
-                sql+= " rowid >=? "
-                cur.execute(sql, [firstID])
-
-            elif firstID == -1 and lastID > -1:
-                sql+= " rowid <=? "
-                cur.execute(sql, [lastID])
-                
-            elif firstID > -1 and lastID > -1:
-                sql+= " rowid BETWEEN ? AND ?"
-                cur.execute(sql, [firstID, lastID])
-
+        if tableName is None:
+            cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
+            tables = [member[0] for member in cur.fetchall()]
+            dataTable = {"tables" : tables}
         else:
-            cur.execute(sql)
+          #cur.row_factory = lambda cursor, row: row[0] #Prefer list instread of tuple
+          sql = "SELECT * FROM " + tableName
 
-        colNames = [member[0] for member in cur.description]
-        rows = cur.fetchall()
+          #Filter form x row to x row
+          if firstID > -1 or lastID > -1:
+              sql += " WHERE"
+  
+              if firstID > -1 and lastID == -1:
+                  sql+= " rowid >=? "
+                  cur.execute(sql, [firstID])
+  
+              elif firstID == -1 and lastID > -1:
+                  sql+= " rowid <=? "
+                  cur.execute(sql, [lastID])
+                  
+              elif firstID > -1 and lastID > -1:
+                  sql+= " rowid BETWEEN ? AND ?"
+                  cur.execute(sql, [firstID, lastID])
+  
+          else:
+              cur.execute(sql)
 
-        dataTable = {"column": colNames, "data": rows}
+          #Trim 'None' from get table name
+          #from (('Tablename1', None, None,....),('Tablename2', None, None,....))
+          #to   ('Tablename1', 'Tablename2')
+          colNames = [member[0] for member in cur.description]
+
+          rows = cur.fetchall()
+          cur.close()
+  
+          dataTable = {"column": colNames, "data": rows}
 
         return dataTable
-        
+
         

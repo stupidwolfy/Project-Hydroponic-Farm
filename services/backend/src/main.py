@@ -121,3 +121,11 @@ async def get_ec():
 async def get_image():
     live_img = CamHandler.GetImage(180)
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
+
+@app.get("/data/{dataTableName}")
+async def get_record(dataTableName: str):
+    return db.GetRecords(dataTableName)
+
+@app.get("/data")
+async def get_record_tables():
+    return db.GetRecords()
