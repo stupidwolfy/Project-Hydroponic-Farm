@@ -1,5 +1,5 @@
 import sqlite3
-import datetime
+from datetime import datetime, timezone
 
 class SqlLite:
     def __init__(self, name, isMem=False):
@@ -31,11 +31,12 @@ class SqlLite:
 
     def CreateDataTable(self, tableName, tableHeaders):
         cur =  self.con.cursor()
-        cur.execute("create table if not exists "+ tableName +"(" +','.join(tableHeaders)+")")
+        cur.execute("create table if not exists "+ tableName +"(" + "Time_Stamp, " +','.join(tableHeaders)+")")
         
         self.Refresh()
 
     def Append(self, tableName, recordList, autoCommit=True):
+        recordList.insert(0, datetime.now()) #inject current datetime to list (utc time)
         cur =  self.con.cursor()
         cur.execute("insert into "+ tableName +" values (? " + ", ?"*(len(recordList)-1) + ")", recordList)
 
