@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-from pydantic import BaseModel, BaseConfig, create_model
+#from pydantic import BaseModel, BaseConfig, create_model
 
 GPIO.setmode(GPIO.BCM)   
 

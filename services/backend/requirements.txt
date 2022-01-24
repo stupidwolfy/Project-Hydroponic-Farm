@@ -9,3 +9,4 @@ RPi.GPIO
 adafruit-ads1x15 #ADC library
 pydantic==1.8.2
 arrow #for time zone convertion
+jsonpickle #for save device setting 

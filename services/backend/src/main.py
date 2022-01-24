@@ -6,21 +6,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import random
 import io
-#from services.backend.src import ADCManager
 from starlette.responses import StreamingResponse
 import RPi.GPIO as GPIO
-import cv2
-import json
 
-from src import ADCManager, CamHandler, RelayManager, SwitchManager, DBManager
+from src import ADCManager, CamHandler, RelayManager, SwitchManager, DBManager, FileManager
 
-# init
-relays = []
-adcs = []
-Switchs = []
 
-tempData = []
+#tempData = []
 
+#Test wirte to database. should removed after Auto-save sensor function is coded
 db = DBManager.SqlLite("Sensor_history")
 
 db.CreateDataTable("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
@@ -29,20 +23,29 @@ db.CreateDataTable("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
 #test add new record
 db.Append("Garden_A_Sensor", [25, 50, 6.2, 2.22, 28, 0])
 
-pumpA = RelayManager.Relay('Pump A', id=relays.count, pin=17)
-relays.append(pumpA)
-pumpB = RelayManager.Relay('Pump B', id=relays.count, pin=27)
-relays.append(pumpB)
+devices = FileManager.LoadObjFromJson("devices.json")
 
-led = RelayManager.Relay('led', id=relays.count, pin=22)
-relays.append(led)
+if devices is None:
+    devices = {'relays': [], 'adcs': [],'switchs': [], 'camera': []}
+    
+    #Test create device object. Should remove after Load/Save json is coded
+    pumpA = RelayManager.Relay('Pump A', id=len(devices['relays']), pin=17)
+    devices['relays'].append(pumpA)
+    pumpB = RelayManager.Relay('Pump B', id=len(devices['relays']), pin=27)
+    devices['relays'].append(pumpB)
+    
+    led = RelayManager.Relay('led', id=len(devices['relays']), pin=22)
+    devices['relays'].append(led)
+    
+    adc = ADCManager.ADS1115("adc A", id=len(devices['adcs'])) # i2c pin, default address
+    devices['adcs'].append(adc)
+    
+    waterLMSW = SwitchManager.Switch("Water LMSW", id=len(devices['switchs']), pin=18,testmode=True)
+    devices['switchs'].append(waterLMSW)
+    
+    FileManager.SaveObjAsJson("devices.json", devices)
 
-adc = ADCManager.ADS1115("adc A", id=adcs.count) # i2c pin, default address
-adcs.append(adc)
-
-waterLMSW = SwitchManager.Switch("Water LMSW", id=Switchs.count, pin=18,testmode=True)
-Switchs.append(waterLMSW)
-
+#init Fastapi
 app = FastAPI()
 
 origins = [
@@ -57,7 +60,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Main Fastapi 
+#Main Fastapi 
 @app.get("/")
 async def home():
     return {"Hello": "World"}
@@ -122,10 +125,10 @@ async def get_image():
     live_img = CamHandler.GetImage(180)
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
 
-@app.get("/data/{dataTableName}")
-async def get_record(dataTableName: str):
-    return db.GetRecords(dataTableName)
-
 @app.get("/data")
 async def get_record_tables():
     return db.GetRecords()
+
+@app.get("/data/{dataTableName}")
+async def get_records(dataTableName: str):
+    return db.GetRecords(dataTableName)

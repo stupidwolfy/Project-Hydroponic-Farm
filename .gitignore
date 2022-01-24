@@ -1,5 +1,6 @@
 #DB path
-services/backend/src/DB
+#services/backend/src/DB/
+#services/backend/src/Config/
 
 #Python
 
