@@ -26,7 +26,7 @@ sudo apt install python3-dev
 sudo apt-get install -y python3 python3-pip
 ```
 
-- #### Install Docke-Compose
+- #### Install Docker-Compose
 ``` bash
 sudo pip3 install docker-compose
 ```
@@ -49,11 +49,11 @@ sudo raspi-config
 - #### Download Project
 ``` bash
 git clone https://github.com/stupidwolfy/Project-Hydroponic-Farm.git
-cd Project-Hydroponic-Farm/
 ```
 
 - #### Build/Run Project
 ``` bash
+cd Project-Hydroponic-Farm/
 docker-compose up -d
 ```
 ---
