@@ -10,7 +10,7 @@ import router from './router'
 import store from './store'
 
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = 'http://192.168.1.11:5000/';  // the FastAPI backend <tood: dynamicly replace with host ip>
+axios.defaults.baseURL = 'http://192.168.43.81:5000/';  // the FastAPI backend <todo: dynamicly replace with host ip>
 
 Vue.config.productionTip = false
 

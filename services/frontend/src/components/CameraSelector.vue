@@ -2,7 +2,7 @@
   <mdb-container>
     <MDBRow>
       <MDBCol>
-        <img :src="'http://192.168.1.11:5000/cam'"> 
+        <img :src="'http://192.168.43.81:5000/cam'"> 
       </MDBCol>
     </MDBRow>
   </mdb-container>
