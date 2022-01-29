@@ -9,7 +9,9 @@ import io
 from starlette.responses import StreamingResponse
 import RPi.GPIO as GPIO
 
-from src import ADCManager, CamHandler, RelayManager, SwitchManager, DBManager, FileManager
+from src import DBManager, FileManager
+
+from src.devices import ADCManager, CamHandler, RelayManager, SwitchManager
 
 
 #tempData = []
@@ -49,12 +51,12 @@ if devices is None:
 app = FastAPI()
 
 origins = [
-    "http://localhost:8080/",
+    "(http://localhost:8080/)",
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -10,7 +10,7 @@ class SqlLite:
         if isMem:
             self.con = sqlite3.connect(":memory:")
         else:
-            self.con = sqlite3.connect('./src/DB/' +name+'.db')
+            self.con = sqlite3.connect('./DB/' +name+'.db')
 
     def Close(self):
         cur =  self.con.cursor()
@@ -20,7 +20,7 @@ class SqlLite:
     def Refresh(self):
         self.Close()
 
-        self.con = sqlite3.connect(":memory:" if self.isMem else './src/DB/' +self.name+'.db')
+        self.con = sqlite3.connect(":memory:" if self.isMem else './DB/' +self.name+'.db')
     
     def Exe(self, exeStr):
         cur =  self.con.cursor()

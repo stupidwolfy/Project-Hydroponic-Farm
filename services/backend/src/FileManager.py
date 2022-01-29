@@ -3,7 +3,7 @@ import jsonpickle
 
 def LoadObjFromJson(filename, useJsonPickle= True):
     try:
-        with open("./src/Config/" + filename, 'r') as file_object:
+        with open("./Config/" + filename, 'r') as file_object:
             if useJsonPickle:
                 jsonStr = file_object.read()
                 obj = jsonpickle.decode(jsonStr)
@@ -16,7 +16,7 @@ def LoadObjFromJson(filename, useJsonPickle= True):
 
 def SaveObjAsJson(filename, targetObj, useJsonPickle= True):
     try:
-        with open("./src/Config/" + filename, 'w') as file_object:
+        with open("./Config/" + filename, 'w') as file_object:
             if useJsonPickle:
                 jsonObj = jsonpickle.encode(targetObj, indent=4)
                 file_object.write(jsonObj)
