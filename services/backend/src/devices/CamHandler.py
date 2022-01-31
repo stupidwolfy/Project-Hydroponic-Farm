@@ -13,4 +13,7 @@ def GetImage(rotate = 0):
         elif rotate == 270:
             frame = cv2.rotate(frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
         (flag, encodedImage) = cv2.imencode(".jpg", frame)
+    else:
+        img = cv2.imread('camerror.jpg')
+        (flag, encodedImage) = cv2.imencode(".jpg", img)
     return encodedImage

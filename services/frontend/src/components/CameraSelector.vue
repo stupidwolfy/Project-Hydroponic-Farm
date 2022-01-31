@@ -2,7 +2,7 @@
   <mdb-container>
     <MDBRow>
       <MDBCol>
-        <img :src=hostname> 
+        <img :src=hostname width="25%"> 
       </MDBCol>
     </MDBRow>
   </mdb-container>

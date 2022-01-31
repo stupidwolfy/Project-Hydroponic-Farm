@@ -129,6 +129,8 @@ async def get_ec():
 @app.get("/cam")
 async def get_image():
     live_img = CamHandler.GetImage(180)
+    if live_img is None:
+        raise HTTPException(status_code=404, detail="Camera not found")
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
 
 @app.get("/data")
