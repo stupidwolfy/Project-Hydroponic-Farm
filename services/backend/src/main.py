@@ -13,7 +13,6 @@ from src import DBManager, FileManager
 
 from src.devices import ADCManager, CamHandler, RelayManager, SwitchManager
 
-
 #tempData = []
 
 #Test wirte to database. should removed after Auto-save sensor function is coded
@@ -83,24 +82,24 @@ async def relay_control(number: int, power: bool):
     try:
         #Pumps code
         if power:
-            relays[number].ON()
+            devices['relays'][number].ON()
         else:
-            relays[number].OFF()
-        return {relays[number].name: power}
+            devices['relays'][number].OFF()
+        return {devices['relays'][number].name: power}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/relay/{number}")
 async def pump_state(number: int):
     try:
-        return {relays[number].name:relays[number].isON is True}
+        return {devices['relays'][number].name:devices['relays'][number].isON is True}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/switch/{number}")
 async def switch_state(number: int):
     try:
-        return {"name":Switchs[number].name, "value":Switchs[number].getState == 0}
+        return {"name":devices['switchs'][number].name, "value":devices['switchs'][number].getState == 0}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
 
