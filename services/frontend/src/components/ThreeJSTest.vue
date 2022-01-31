@@ -1,22 +1,22 @@
 <template>
   <mdb-container>
-    <MDBRow>
-      <MDBCol>
+    <mdbRow>
+      <mdbCol>
         Test 
-      </MDBCol>
-    </MDBRow>
+      </mdbCol>
+    </mdbRow>
   </mdb-container>
 </template>
 <script>
 
-import { mdbContainer, MDBRow, MDBCol } from "mdbvue";
+import { mdbContainer, mdbRow, mdbCol } from "mdbvue";
 
 export default {
   name: 'msg',
   components: {
       mdbContainer, 
-      MDBRow, 
-      MDBCol
+      mdbRow, 
+      mdbCol
     },
   data() {
   },

@@ -1,23 +1,23 @@
 <template>
   <mdbContainer>
-    <MDBRow>
-      <MDBCol>Temp = {{ temp }}C | </MDBCol>
-      <MDBCol>Humid = {{ humid }} % | </MDBCol>
-      <MDBCol>Water temp = {{ waterTemp }}C | </MDBCol>
-      <MDBCol>PH = {{ ph }} | </MDBCol>
-      <MDBCol>EC = {{ ec }} | </MDBCol>
-      <MDBCol>{{ sw[0].name }}  = {{ sw[0].value }} </MDBCol>
-    </MDBRow>
+    <mdbRow>
+      <mdbCol>Temp = {{ temp }}C  </mdbCol>
+      <mdbCol>Humid = {{ humid }} %  </mdbCol>
+      <mdbCol>Water temp = {{ waterTemp }}C  </mdbCol>
+      <mdbCol>PH = {{ ph }}  </mdbCol>
+      <mdbCol>EC = {{ ec }}  </mdbCol>
+      <mdbCol>{{ sw[0].name }}  = {{ sw[0].value }} </mdbCol>
+    </mdbRow>
   </mdbContainer>
 </template>
 
 <script>
 import axios from 'axios';
-import { mdbContainer, MDBRow, MDBCol } from "mdbvue";
+import { mdbContainer, mdbRow, mdbCol } from "mdbvue";
 
 export default {
   name: 'msg',
-  components: { mdbContainer, MDBRow, MDBCol},
+  components: { mdbContainer, mdbRow, mdbCol},
   data() {
     return {
       msg: 'err',
