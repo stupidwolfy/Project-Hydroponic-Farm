@@ -10,7 +10,7 @@ import router from './router'
 import store from './store'
 
 axios.defaults.withCredentials = true;
-axios.defaults.baseURL = 'http://pi-zero.local:5000/';  // the FastAPI backend <todo: dynamicly replace with host ip>
+axios.defaults.baseURL = `http://${process.env.VUE_APP_HOST_HOSTNAME}.local:5000/`;  // the FastAPI backend <todo: dynamicly replace with host ip>
 
 Vue.config.productionTip = false
 

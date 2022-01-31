@@ -6,12 +6,15 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import random
 import io
+import os
 from starlette.responses import StreamingResponse
 import RPi.GPIO as GPIO
 
 from src import DBManager, FileManager
 
 from src.devices import ADCManager, CamHandler, RelayManager, SwitchManager
+
+HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 
 #tempData = []
 
@@ -57,7 +60,7 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins= origins,
+    allow_origins= [f"http://{HOST_HOSTNAME}.local:8080"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

@@ -2,7 +2,7 @@
   <mdb-container>
     <MDBRow>
       <MDBCol>
-        <img :src="'http://192.168.43.81:5000/cam'"> 
+        <img :src=hostname> 
       </MDBCol>
     </MDBRow>
   </mdb-container>
@@ -19,6 +19,9 @@ export default {
       MDBCol
     },
   data() {
+    return {
+      hostname: 'http://'+process.env.VUE_APP_HOST_HOSTNAME+'.local:5000/cam',
+    };
   },
   methods: {
   },

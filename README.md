@@ -54,6 +54,6 @@ git clone https://github.com/stupidwolfy/Project-Hydroponic-Farm.git
 - #### Build/Run Project
 ``` bash
 cd Project-Hydroponic-Farm/
-docker-compose up -d
+HOST_HOSTNAME=$(hostname) docker-compose up -d 
 ```
 ---
