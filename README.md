@@ -52,7 +52,7 @@
   ```
 
 - #### Config Project (optional)
-    ##### If you device hostname is not raspberrypi
+    #### If you device hostname is not ```raspberrypi``` (default)
     - Edit file ``` docker-compose.yml ```
       - at ```HOST_HOSTNAME: ${HOST_HOSTNAME:-raspberrypi}``` change "raspberrypi" to your device hostname
     - Edit file ``` services/frontend/.env ```
