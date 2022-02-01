@@ -1,4 +1,6 @@
 # Project-Hydroponic-Farm :computer: :seedling:
+  ### [Installation](#installation)
+  ### [Usage](#usage)
 
 ## Installation
 
