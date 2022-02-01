@@ -64,3 +64,8 @@
   docker-compose up -d
   ``` 
   ---
+  
+## Usage
+  #### From other device in same local network.
+  - #### Access Frontend : Go to http://raspberrypi.local:8080 or ```http://<your-device-hostname>.local:8080```
+  - #### Access Backend : Go to http://raspberrypi.local:5000 or ```http://<your-device-hostname>.local:5000```
