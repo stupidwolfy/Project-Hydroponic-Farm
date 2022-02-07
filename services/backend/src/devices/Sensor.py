@@ -4,36 +4,46 @@ import RPi.GPIO as GPIO
 import Adafruit_ADS1x15
 import random
 
-GPIO.setmode(GPIO.BCM)   
+GPIO.setmode(GPIO.BCM)
+
 
 class Sensor(ABC):
     @abstractmethod
-    def __init__(self, name, device_id):
+    def __init__(self, name, device_id, db):
         self.name = name
         self.device_id = device_id
+        self.db = db
+        self.save_interval = 60
+        self.data = None
 
-    @abstractmethod
-    def StartBackgroundRead(self):
-        pass
+    def PeriodicBackgroundSave(self, scheduler):
+        #schedule next save
+        scheduler.enter(self.save_interval, 1, self.PeriodicBackgroundSave,
+                         (scheduler))
+        
+        #Save to db
+        self.db.CreateDataTable("Sensor_"+self.name, ["data"])
+        self.db.Append("Sensor_"+self.name, [self.data])
+
+    def StartBackgroundSave(self, db):
+        self.db = db
 
 class I2cSensor(Sensor):
     @abstractmethod
-    def __init__(self, name, device_id, address):
-        super(I2cSensor, self).__init__(name, device_id)
+    def __init__(self, name, device_id, db, address):
+        super().__init__(name, device_id, db)
         self.address = address
 
-    def StartBackgroundRead(self):
-        pass
 
 class AnalogSensor(Sensor):
     @abstractmethod
-    def __init__(self, name, device_id, analogDevice):
-        super(AnalogSensor, self).__init__(name, device_id)
+    def __init__(self, name, device_id, db, analogDevice):
+        super(AnalogSensor, self).__init__(name, device_id, db)
         self.analogDevice = analogDevice
 
 class ADS1115(I2cSensor):
-    def __init__(self, name, device_id, gain=1,  address=None):
-        super(ADS1115, self).__init__(name, device_id, address)
+    def __init__(self, name, device_id, db, gain=1,  address=None):
+        super().__init__(name, device_id, db, address)
         self.gain = gain
         if (address is None):
             self.adc = Adafruit_ADS1x15.ADS1115()
@@ -42,7 +52,7 @@ class ADS1115(I2cSensor):
 
     def update(self):
         self.values = [0]*4
-        if (self.testMode is True):
+        if (True): #Testmode
             for i in range(4):
                 self.values[i] = random.randint(0, 1023)
         else:
@@ -62,8 +72,8 @@ class ADS1115(I2cSensor):
         self.name = name
 
 class Switch(Sensor):
-    def __init__(self, name, device_id, pin, pullUpDown=None): #pullUpDown: True --> pullup | False --> pulldown | null --> not pull up/down):
-        super(Switch, self).__init__(name, device_id)
+    def __init__(self, name, device_id, db, pin, pullUpDown=None): #pullUpDown: True --> pullup | False --> pulldown | null --> not pull up/down):
+        super().__init__(name, device_id, db)
         self.pin = pin
         self.pullUpDown = pullUpDown
 
@@ -73,12 +83,17 @@ class Switch(Sensor):
             GPIO.setup(self.pin, GPIO.IN, pull_up_down =GPIO.PUD_UP)
         else:
             GPIO.setup(self.pin, GPIO.IN, pull_up_down =GPIO.PUD_DOWN)
+    
+    def PeriodicBackgroundSave(self, scheduler):
+        self.data = self.getState()
+        super(Switch, self).PeriodicBackgroundSave(scheduler)
 
-    def StartBackgroundRead(self):
-        super(Switch, self).StartBackgroundRead()
+    def StartBackgroundSave(self, db, scheduler):
+        super().StartBackgroundSave(db)
+        self.PeriodicBackgroundSave(scheduler)
 
     def getState(self):
-        if (self.testMode is True):
+        if (True): #Testmode
             gpioStates = [GPIO.HIGH, GPIO.LOW]
             return random.choice(gpioStates)
         else:

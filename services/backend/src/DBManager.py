@@ -42,12 +42,14 @@ class SqlLite:
         return rows
 
     def CreateDataTable(self, tableName, tableHeaders):
+        tableName = tableName.replace(" ", "_")
         cur =  self.con.cursor()
         cur.execute("create table if not exists "+ tableName +"(" + "Time_Stamp, " +','.join(tableHeaders)+")")
         
         self.Refresh()
 
     def Append(self, tableName, recordList, autoCommit=True):
+        tableName = tableName.replace(" ", "_")
         recordList.insert(0, datetime.now()) #inject current datetime to list (utc time)
         cur =  self.con.cursor()
         cur.execute("insert into "+ tableName +" values (? " + ", ?"*(len(recordList)-1) + ")", recordList)

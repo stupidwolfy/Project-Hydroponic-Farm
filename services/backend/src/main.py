@@ -4,6 +4,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi_utils.tasks import repeat_every
 from fastapi.middleware.cors import CORSMiddleware
 
+import time
+import sched
 import random
 import io
 import os
@@ -16,6 +18,7 @@ from src.devices import Output, Sensor, CamHandler
 
 HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 
+scheduler = sched.scheduler(time.time, time.sleep)
 #tempData = []
 
 #Test wirte to database. should removed after Auto-save sensor function is coded
@@ -30,7 +33,7 @@ devices = FileManager.LoadObjFromJson("devices.json")
 
 if devices is None:
     devices = {'relays': [], 'adcs': [],'switchs': [], 'camera': []}
-    
+
     #Test create device object. Should remove after Load/Save json is coded
     pumpA = Output.Relay('Pump A', device_id=len(devices['relays']), pin=17)
     devices['relays'].append(pumpA)
@@ -40,13 +43,15 @@ if devices is None:
     led = Output.Relay('led', device_id=len(devices['relays']), pin=22)
     devices['relays'].append(led)
     
-    adc = Sensor.ADS1115("adc A", device_id=len(devices['adcs'])) # i2c pin, default address
+    adc = Sensor.ADS1115("adc A", db=db, device_id=len(devices['adcs'])) # i2c pin, default address
     devices['adcs'].append(adc)
     
-    waterLMSW = Sensor.Switch("Water LMSW", device_id=len(devices['switchs']), pin=18)
+    waterLMSW = Sensor.Switch("Water LMSW", db=db, device_id=len(devices['switchs']), pin=18)
     devices['switchs'].append(waterLMSW)
     
     FileManager.SaveObjAsJson("devices.json", devices)
+
+devices['switchs'][0].StartBackgroundSave(db, scheduler)
 
 #init Fastapi
 app = FastAPI()
