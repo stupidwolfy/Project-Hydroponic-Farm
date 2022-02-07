@@ -12,7 +12,7 @@ import RPi.GPIO as GPIO
 
 from src import DBManager, FileManager
 
-from src.devices import ADCManager, CamHandler, RelayManager, SwitchManager
+from src.devices import Output, Sensor, CamHandler
 
 HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 
@@ -20,7 +20,6 @@ HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 
 #Test wirte to database. should removed after Auto-save sensor function is coded
 db = DBManager.SqlLite("Sensor_history")
-
 db.CreateDataTable("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
 db.CreateDataTable("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
 
@@ -33,18 +32,18 @@ if devices is None:
     devices = {'relays': [], 'adcs': [],'switchs': [], 'camera': []}
     
     #Test create device object. Should remove after Load/Save json is coded
-    pumpA = RelayManager.Relay('Pump A', id=len(devices['relays']), pin=17)
+    pumpA = Output.Relay('Pump A', device_id=len(devices['relays']), pin=17)
     devices['relays'].append(pumpA)
-    pumpB = RelayManager.Relay('Pump B', id=len(devices['relays']), pin=27)
+    pumpB = Output.Relay('Pump B', device_id=len(devices['relays']), pin=27)
     devices['relays'].append(pumpB)
     
-    led = RelayManager.Relay('led', id=len(devices['relays']), pin=22)
+    led = Output.Relay('led', device_id=len(devices['relays']), pin=22)
     devices['relays'].append(led)
     
-    adc = ADCManager.ADS1115("adc A", id=len(devices['adcs'])) # i2c pin, default address
+    adc = Sensor.ADS1115("adc A", device_id=len(devices['adcs'])) # i2c pin, default address
     devices['adcs'].append(adc)
     
-    waterLMSW = SwitchManager.Switch("Water LMSW", id=len(devices['switchs']), pin=18,testmode=True)
+    waterLMSW = Sensor.Switch("Water LMSW", device_id=len(devices['switchs']), pin=18)
     devices['switchs'].append(waterLMSW)
     
     FileManager.SaveObjAsJson("devices.json", devices)
@@ -76,9 +75,20 @@ async def device_manager():
     return {"Hello": "ssss"}
 
 #@app.get("/pump/add", )
-#def pumpA_pow(new_pump: RelayManager.Relay):
+#def pumpA_pow(new_pump: Output.Relay):
 #    ## %Todo Add dynamic create new pump
 #    return {"status":"Pump xxx added", "new_pump":new_pump.name}
+
+@app.get("/relay")
+async def get_relays():
+    return{"Relays":devices['relays']}
+
+@app.get("/relay/{number}")
+async def pump_state(number: int):
+    try:
+        return {devices['relays'][number]}
+    except IndexError:
+        raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/relay/{number}/{power}")
 async def relay_control(number: int, power: bool):
@@ -89,13 +99,6 @@ async def relay_control(number: int, power: bool):
         else:
             devices['relays'][number].OFF()
         return {devices['relays'][number].name: power}
-    except IndexError:
-        raise HTTPException(status_code=404, detail="Item not found")
-
-@app.get("/relay/{number}")
-async def pump_state(number: int):
-    try:
-        return {devices['relays'][number].name:devices['relays'][number].isON is True}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
 
