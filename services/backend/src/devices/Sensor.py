@@ -7,43 +7,36 @@ import random
 GPIO.setmode(GPIO.BCM)
 
 
+class Repeatable:
+    #For make some methode run repeatly
+    #For performance safety, change interval to 1min (X60sec) instead of 1sec 
+    def PeriodicTask(self, func, interval, scheduler, args):
+        func(*args)
+        scheduler.enter(interval*60, 1, self.PeriodicTask,
+                        (func, interval, scheduler, args))
+
 class Sensor(ABC):
     @abstractmethod
-    def __init__(self, name, device_id, db):
+    def __init__(self, name, device_id):
         self.name = name
         self.device_id = device_id
-        self.db = db
-        self.save_interval = 60
         self.data = None
-
-    def PeriodicBackgroundSave(self, scheduler):
-        #schedule next save
-        scheduler.enter(self.save_interval, 1, self.PeriodicBackgroundSave,
-                         (scheduler))
-        
-        #Save to db
-        self.db.CreateDataTable("Sensor_"+self.name, ["data"])
-        self.db.Append("Sensor_"+self.name, [self.data])
-
-    def StartBackgroundSave(self, db):
-        self.db = db
 
 class I2cSensor(Sensor):
     @abstractmethod
-    def __init__(self, name, device_id, db, address):
-        super().__init__(name, device_id, db)
+    def __init__(self, name, device_id, address):
+        super().__init__(name, device_id)
         self.address = address
-
 
 class AnalogSensor(Sensor):
     @abstractmethod
-    def __init__(self, name, device_id, db, analogDevice):
-        super(AnalogSensor, self).__init__(name, device_id, db)
+    def __init__(self, name, device_id, analogDevice):
+        super(AnalogSensor, self).__init__(name, device_id)
         self.analogDevice = analogDevice
 
 class ADS1115(I2cSensor):
-    def __init__(self, name, device_id, db, gain=1,  address=None):
-        super().__init__(name, device_id, db, address)
+    def __init__(self, name, device_id, gain=1,  address=None):
+        super().__init__(name, device_id, address)
         self.gain = gain
         if (address is None):
             self.adc = Adafruit_ADS1x15.ADS1115()
@@ -71,26 +64,27 @@ class ADS1115(I2cSensor):
     def set_Name(self, name):
         self.name = name
 
-class Switch(Sensor):
-    def __init__(self, name, device_id, db, pin, pullUpDown=None): #pullUpDown: True --> pullup | False --> pulldown | null --> not pull up/down):
-        super().__init__(name, device_id, db)
+class Switch(Sensor, Repeatable):
+    def __init__(self, name, device_id, pin, pullUpDown=None): #pullUpDown: True --> pullup | False --> pulldown | null --> not pull up/down):
+        super().__init__(name, device_id)
         self.pin = pin
         self.pullUpDown = pullUpDown
 
+        #do optional pull up / pull down 
         if (pullUpDown is None):
             GPIO.setup(self.pin, GPIO.IN)  
         elif (pullUpDown is True):
             GPIO.setup(self.pin, GPIO.IN, pull_up_down =GPIO.PUD_UP)
         else:
             GPIO.setup(self.pin, GPIO.IN, pull_up_down =GPIO.PUD_DOWN)
-    
-    def PeriodicBackgroundSave(self, scheduler):
+        
+    def SaveToDB(self, db):
         self.data = self.getState()
-        super(Switch, self).PeriodicBackgroundSave(scheduler)
+        db.CreateDataTable("Sensor_"+self.name, ["data"])
+        db.Append("Sensor_"+self.name, [self.data])
 
-    def StartBackgroundSave(self, db, scheduler):
-        super().StartBackgroundSave(db)
-        self.PeriodicBackgroundSave(scheduler)
+    def PeriodicSaveToDB(self, interval, scheduler, args):
+        return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
 
     def getState(self):
         if (True): #Testmode

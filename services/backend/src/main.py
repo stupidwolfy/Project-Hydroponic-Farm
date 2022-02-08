@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import time
 import sched
+import threading
 import random
 import io
 import os
@@ -18,19 +19,10 @@ from src.devices import Output, Sensor, CamHandler
 
 HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 
-scheduler = sched.scheduler(time.time, time.sleep)
 #tempData = []
 
-#Test wirte to database. should removed after Auto-save sensor function is coded
-db = DBManager.SqlLite("Sensor_history")
-db.CreateDataTable("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
-db.CreateDataTable("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
-
-#test add new record
-db.Append("Garden_A_Sensor", [25, 50, 6.2, 2.22, 28, 0])
-
 devices = FileManager.LoadObjFromJson("devices.json")
-
+#create device if empty
 if devices is None:
     devices = {'relays': [], 'adcs': [],'switchs': [], 'camera': []}
 
@@ -43,15 +35,36 @@ if devices is None:
     led = Output.Relay('led', device_id=len(devices['relays']), pin=22)
     devices['relays'].append(led)
     
-    adc = Sensor.ADS1115("adc A", db=db, device_id=len(devices['adcs'])) # i2c pin, default address
+    adc = Sensor.ADS1115("adc A", device_id=len(devices['adcs'])) # i2c pin, default address
     devices['adcs'].append(adc)
     
-    waterLMSW = Sensor.Switch("Water LMSW", db=db, device_id=len(devices['switchs']), pin=18)
+    waterLMSW = Sensor.Switch("Water LMSW", device_id=len(devices['switchs']), pin=18)
     devices['switchs'].append(waterLMSW)
     
     FileManager.SaveObjAsJson("devices.json", devices)
 
-devices['switchs'][0].StartBackgroundSave(db, scheduler)
+#do background save sensor data to DB
+def Background_DBAutoSave():
+    #Test wirte to database. should removed after Auto-save sensor function is coded
+    db = DBManager.SqlLite("Sensor_history")
+    db.CreateDataTable("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
+    db.CreateDataTable("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
+    #test add new record
+    db.Append("Garden_A_Sensor", [25, 50, 6.2, 2.22, 28, 0])
+
+    #init scheduler
+    scheduler = sched.scheduler(time.time, time.sleep)
+    devices['switchs'][0].PeriodicSaveToDB(1, scheduler, (db,))
+    #devices['EC sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
+    #devices['PH sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
+    #devices['Light sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
+    #devices['Water level'][0].PeriodicSaveToDB(1, scheduler, (db,))
+    
+    scheduler.run()
+
+# Start a thread to run the events
+t1 = threading.Thread(target=Background_DBAutoSave)
+t1.start()
 
 #init Fastapi
 app = FastAPI()
@@ -143,8 +156,10 @@ async def get_image():
 
 @app.get("/data")
 async def get_record_tables():
-    return db.GetRecords()
+    #return db.GetRecords()
+    return {"ok"}
 
 @app.get("/data/{dataTableName}")
 async def get_records(dataTableName: str):
-    return db.GetRecords(dataTableName)
+    #return db.GetRecords(dataTableName)
+    return {"ok"}
