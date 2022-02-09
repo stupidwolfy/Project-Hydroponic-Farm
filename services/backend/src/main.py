@@ -40,21 +40,27 @@ if devices is None:
     
     waterLMSW = Sensor.Switch("Water LMSW", device_id=len(devices['switchs']), pin=18)
     devices['switchs'].append(waterLMSW)
+    waterLMSW2 = Sensor.Switch("Water LMSW222", device_id=len(devices['switchs']), pin=18)
+    devices['switchs'].append(waterLMSW2)
+    waterLMSW3 = Sensor.Switch("Water LMSW3333333", device_id=len(devices['switchs']), pin=18)
+    devices['switchs'].append(waterLMSW3)
     
     FileManager.SaveObjAsJson("devices.json", devices)
 
 #do background save sensor data to DB
 def Background_DBAutoSave():
     #Test wirte to database. should removed after Auto-save sensor function is coded
-    db = DBManager.SqlLite("Sensor_history")
-    db.CreateDataTable("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
-    db.CreateDataTable("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
+    dbThread = DBManager.SqlLite("Sensor_history")
+    dbThread.CreateDataTable("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
+    dbThread.CreateDataTable("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
     #test add new record
-    db.Append("Garden_A_Sensor", [25, 50, 6.2, 2.22, 28, 0])
+    dbThread.Append("Garden_A_Sensor", [25, 50, 6.2, 2.22, 28, 0])
 
     #init scheduler
     scheduler = sched.scheduler(time.time, time.sleep)
-    devices['switchs'][0].PeriodicSaveToDB(1, scheduler, (db,))
+    devices['switchs'][0].PeriodicSaveToDB(1, scheduler, (dbThread,))
+    devices['switchs'][1].PeriodicSaveToDB(5, scheduler, (dbThread,))
+    devices['switchs'][2].PeriodicSaveToDB(10, scheduler, (dbThread,))
     #devices['EC sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
     #devices['PH sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
     #devices['Light sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
@@ -65,6 +71,8 @@ def Background_DBAutoSave():
 # Start a thread to run the events
 t1 = threading.Thread(target=Background_DBAutoSave)
 t1.start()
+
+db = DBManager.SqlLite("Sensor_history")
 
 #init Fastapi
 app = FastAPI()
@@ -156,10 +164,8 @@ async def get_image():
 
 @app.get("/data")
 async def get_record_tables():
-    #return db.GetRecords()
-    return {"ok"}
+    return db.GetRecords()
 
 @app.get("/data/{dataTableName}")
 async def get_records(dataTableName: str):
-    #return db.GetRecords(dataTableName)
-    return {"ok"}
+    return db.GetRecords(dataTableName)
