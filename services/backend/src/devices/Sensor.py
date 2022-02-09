@@ -6,6 +6,8 @@ import random
 
 GPIO.setmode(GPIO.BCM)
 
+def mapRange(value, inMin, inMax, outMin, outMax):
+    return outMin + (((value - inMin) / (inMax - inMin)) * (outMax - outMin))
 
 class Repeatable:
     #For make some methode run repeatly
@@ -92,3 +94,58 @@ class Switch(Sensor, Repeatable):
             return random.choice(gpioStates)
         else:
             return GPIO.input(self.pin)
+
+class WaterLevel(Sensor):
+    def __init__(self, name, device_id, pinTrig, pinEcho, long, width):
+        super().__init__(name, device_id)
+        self.long = long
+        self.width = width
+        self.pinTrig = pinTrig
+        self.pinEcho = pinEcho
+        self.emptyDistance = 100
+        self.fullDistance = 10
+        self.currentDistance = 10
+
+        GPIO.setup(pinTrig, GPIO.OUT)
+        GPIO.setup(pinEcho, GPIO.IN)
+
+    def CalDistance(self):
+        # set Trigger to HIGH
+        GPIO.output(self.pinTrig, True)
+     
+        # set Trigger after 0.01ms to LOW
+        time.sleep(0.00001)
+        GPIO.output(self.pinTrig, False)
+     
+        StartTime = time.time()
+        StopTime = time.time()
+     
+        # save StartTime
+        while GPIO.input(self.pinEcho) == 0:
+            StartTime = time.time()
+     
+        # save time of arrival
+        while GPIO.input(self.pinEcho) == 1:
+            StopTime = time.time()
+     
+        # time difference between start and arrival
+        TimeElapsed = StopTime - StartTime
+        # multiply with the sonic speed (34300 cm/s)
+        # and divide by 2, because there and back
+        distance = (TimeElapsed * 34300) / 2
+        return distance
+
+    def SetFullDistance(self):
+        self.fullDistance = self.CalDistance()
+        return self.fullDistance
+
+    def SetEmptyDistance(self):
+        self.emptyDistance = self.CalDistance()
+        return self.emptyDistance
+
+    def GetWaterLeft(self):
+        self.currentDistance = self.CalDistance()
+
+        waterLeftPercent = mapRange(self.currentDistance, self.fullDistance, self.emptyDistance, 0, 100)
+        return waterLeftPercent
+    
