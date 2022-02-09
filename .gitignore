@@ -1,7 +1,6 @@
 #DB path
-#services/backend/src/DB/
-#services/backend/src/Config/
-
+services/backend/src/DB/Sensor_history.db
+services/backend/src/Config/devices.json
 #Python
 
 # Byte-compiled / optimized / DLL files
