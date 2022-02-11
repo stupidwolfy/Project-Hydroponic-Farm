@@ -22,9 +22,7 @@ services:
 
   frontend:
     container_name: "Frontend"
-    build:
-      context: .
-      dockerfile: frontend.dockerfile
+    build: ./services/frontend
     volumes:
       - './services/frontend:/app'
       - '/app/node_modules'

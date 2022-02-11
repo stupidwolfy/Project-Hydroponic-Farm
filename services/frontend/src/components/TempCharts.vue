@@ -1,4 +1,5 @@
 <template>
+
   <mdb-container>
     <mdb-line-chart
       :data="lineChartData"

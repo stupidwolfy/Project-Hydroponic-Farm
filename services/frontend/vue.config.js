@@ -8,4 +8,8 @@ module.exports = {
       'raspberrypi.local'
     ],
   },
+
+  transpileDependencies: [
+    'vuetify'
+  ]
 }

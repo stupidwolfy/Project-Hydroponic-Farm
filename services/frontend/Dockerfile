@@ -9,5 +9,7 @@ RUN npm install @vue/cli -g
 COPY package.json .
 COPY package-lock.json .
 RUN npm install
+RUN npm install vuetify
+
 
 CMD ["npm", "run", "serve"]
