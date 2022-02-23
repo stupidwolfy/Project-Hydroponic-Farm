@@ -5,6 +5,7 @@ services:
   backend:
     container_name: "Backend"
     build: ./services/backend
+    image: stupidwolfy/hydroponic-backend
     ports:
       - 5000:5000
     volumes:
@@ -23,6 +24,7 @@ services:
   frontend:
     container_name: "Frontend"
     build: ./services/frontend
+    image: stupidwolfy/hydroponic-frontend
     volumes:
       - './services/frontend:/app'
       - '/app/node_modules'

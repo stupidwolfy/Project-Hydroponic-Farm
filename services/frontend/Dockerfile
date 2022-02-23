@@ -3,6 +3,7 @@ FROM node:lts-buster
 WORKDIR /app
 
 ENV PATH /app/node_modules/.bin:$PATH
+ENV NODE_OPTIONS=--max_old_space_size=1024
 
 RUN npm install @vue/cli -g
 

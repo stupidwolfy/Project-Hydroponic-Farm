@@ -24,26 +24,26 @@ HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 devices = FileManager.LoadObjFromJson("devices.json")
 #create device if empty
 if devices is None:
-    devices = {'relays': [], 'adcs': [],'switchs': [], 'camera': []}
+    devices = {'output':{ 'relays': []},'sensor':{ 'adcs': [], 'switchs': []}}
 
     #Test create device object. Should remove after Load/Save json is coded
-    pumpA = Output.Relay('Pump A', device_id=len(devices['relays']), pin=17)
-    devices['relays'].append(pumpA)
-    pumpB = Output.Relay('Pump B', device_id=len(devices['relays']), pin=27)
-    devices['relays'].append(pumpB)
+    pumpA = Output.Relay('Pump A', device_id=len(devices['output']['relays']), pin=17)
+    devices['output']['relays'].append(pumpA)
+    pumpB = Output.Relay('Pump B', device_id=len(devices['output']['relays']), pin=27)
+    devices['output']['relays'].append(pumpB)
     
-    led = Output.Relay('led', device_id=len(devices['relays']), pin=22)
-    devices['relays'].append(led)
+    led = Output.Relay('led', device_id=len(devices['output']['relays']), pin=22)
+    devices['output']['relays'].append(led)
     
-    adc = Sensor.ADS1115("adc A", device_id=len(devices['adcs'])) # i2c pin, default address
-    devices['adcs'].append(adc)
+    adc = Sensor.ADS1115("adc A", device_id=len(devices['sensor']['adcs'])) # i2c pin, default address
+    devices['sensor']['adcs'].append(adc)
     
-    waterLMSW = Sensor.Switch("Water LMSW", device_id=len(devices['switchs']), pin=18)
-    devices['switchs'].append(waterLMSW)
-    waterLMSW2 = Sensor.Switch("Water LMSW222", device_id=len(devices['switchs']), pin=18)
-    devices['switchs'].append(waterLMSW2)
-    waterLMSW3 = Sensor.Switch("Water LMSW3333333", device_id=len(devices['switchs']), pin=18)
-    devices['switchs'].append(waterLMSW3)
+    waterLMSW = Sensor.Switch("Water LMSW", device_id=len(devices['sensor']['switchs']), pin=18)
+    devices['sensor']['switchs'].append(waterLMSW)
+    waterLMSW2 = Sensor.Switch("Water LMSW222", device_id=len(devices['sensor']['switchs']), pin=18)
+    devices['sensor']['switchs'].append(waterLMSW2)
+    waterLMSW3 = Sensor.Switch("Water LMSW3333333", device_id=len(devices['sensor']['switchs']), pin=18)
+    devices['sensor']['switchs'].append(waterLMSW3)
     
     FileManager.SaveObjAsJson("devices.json", devices)
 
@@ -58,9 +58,9 @@ def Background_DBAutoSave():
 
     #init scheduler
     scheduler = sched.scheduler(time.time, time.sleep)
-    devices['switchs'][0].PeriodicSaveToDB(1, scheduler, (dbThread,))
-    devices['switchs'][1].PeriodicSaveToDB(5, scheduler, (dbThread,))
-    devices['switchs'][2].PeriodicSaveToDB(10, scheduler, (dbThread,))
+    devices['sensor']['switchs'][0].PeriodicSaveToDB(1, scheduler, (dbThread,))
+    devices['sensor']['switchs'][1].PeriodicSaveToDB(5, scheduler, (dbThread,))
+    devices['sensor']['switchs'][2].PeriodicSaveToDB(10, scheduler, (dbThread,))
     #devices['EC sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
     #devices['PH sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
     #devices['Light sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
@@ -107,12 +107,12 @@ async def device_manager():
 
 @app.get("/relay")
 async def get_relays():
-    return{"Relays":devices['relays']}
+    return{"Relays":devices['output']['relays']}
 
 @app.get("/relay/{number}")
 async def pump_state(number: int):
     try:
-        return {devices['relays'][number]}
+        return {devices['output']['relays'][number]}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
 
@@ -121,17 +121,17 @@ async def relay_control(number: int, power: bool):
     try:
         #Pumps code
         if power:
-            devices['relays'][number].ON()
+            devices['output']['relays'][number].ON()
         else:
-            devices['relays'][number].OFF()
-        return {devices['relays'][number].name: power}
+            devices['output']['relays'][number].OFF()
+        return {devices['output']['relays'][number].name: power}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
 
 @app.get("/switch/{number}")
 async def switch_state(number: int):
     try:
-        return {"name":devices['switchs'][number].name, "value":devices['switchs'][number].getState == 0}
+        return {"name":devices['sensor']['switchs'][number].name, "value":devices['sensor']['switchs'][number].getState == 0}
     except IndexError:
         raise HTTPException(status_code=404, detail="Item not found")
 
