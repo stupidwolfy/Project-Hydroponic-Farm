@@ -4,7 +4,7 @@
     <mdb-line-chart
       :data="lineChartData"
       :options="lineChartOptions"
-      :width="600"
+      :width="400"
       :height="300"
       reactive
       :time="1000"
