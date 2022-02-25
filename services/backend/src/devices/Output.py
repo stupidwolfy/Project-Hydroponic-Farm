@@ -7,6 +7,10 @@ import random
 GPIO.setmode(GPIO.BCM)   
 
 class Relay:
+    #if loaded from file
+    def __getinitargs__(self):
+        return self.name, self.device_id, self.pin, self.activeLOW, self.ininState
+
     def __init__(self, name, device_id, pin, activeLOW=False, ininState = None):
         self.name = name
         self.pin = pin
