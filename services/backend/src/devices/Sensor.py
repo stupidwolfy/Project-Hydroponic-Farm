@@ -67,6 +67,10 @@ class ADS1115(I2cSensor):
         self.name = name
 
 class Switch(Sensor, Repeatable):
+    #when loaded from file
+    def __getinitargs__(self):
+        return self.name, self.device_id, self.pin, self.pullUpDown
+
     def __init__(self, name, device_id, pin, pullUpDown=None): #pullUpDown: True --> pullup | False --> pulldown | null --> not pull up/down):
         super().__init__(name, device_id)
         self.pin = pin
@@ -96,6 +100,10 @@ class Switch(Sensor, Repeatable):
             return GPIO.input(self.pin)
 
 class WaterLevel(Sensor):
+    #when loaded from file
+    def __getinitargs__(self):
+        return self.name, self.device_id, self.pinTrig, self.pinEcho, self.long, self.width
+
     def __init__(self, name, device_id, pinTrig, pinEcho, long, width):
         super().__init__(name, device_id)
         self.long = long
