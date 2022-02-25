@@ -3,15 +3,17 @@ import time
 import RPi.GPIO as GPIO
 import Adafruit_ADS1x15
 import random
+from typing import Optional
+from fastapi import Body
 
 GPIO.setmode(GPIO.BCM)   
 
 class Relay:
     #when loaded from file
     def __getinitargs__(self):
-        return self.name, self.device_id, self.pin, self.activeLOW, self.ininState
+        return self.name, self.device_id, self.pin, self.activeLOW
 
-    def __init__(self, name, device_id, pin, activeLOW=False, ininState = None):
+    def __init__(self, name: str = Body(""), device_id: int = Body(0), pin: int = Body(0), activeLOW: bool= Body(False), ininState: Optional[bool] = Body(False)):
         self.name = name
         self.pin = pin
         self.activeLOW = activeLOW
@@ -20,8 +22,8 @@ class Relay:
         
         GPIO.setup(self.pin, GPIO.OUT)  
 
-        if (not ininState is None):
-            GPIO.output(self.pin, ininState)
+        #if (not ininState is None):
+        #    GPIO.output(self.pin, ininState)
 
     def ON(self):
         self.isON = True

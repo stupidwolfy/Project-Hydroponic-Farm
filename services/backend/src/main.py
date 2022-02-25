@@ -1,8 +1,10 @@
 import dbm
 from typing import Optional
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi_utils.tasks import repeat_every
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+
 
 import time
 import sched
@@ -22,27 +24,27 @@ HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 #tempData = []
 
 devices = FileManager.LoadObjFromJson("devices.json")
-#create device if empty
+#create device if no json file
 if devices is None:
     devices = {'output':{ 'relays': []},'sensor':{ 'adcs': [], 'switchs': []}}
 
     #Test create device object. Should remove after Load/Save json is coded
-    pumpA = Output.Relay('Pump A', device_id=len(devices['output']['relays']), pin=17)
+    pumpA = Output.Relay('Pump A', device_id=0, pin=17)
     devices['output']['relays'].append(pumpA)
-    pumpB = Output.Relay('Pump B', device_id=len(devices['output']['relays']), pin=27)
+    pumpB = Output.Relay('Pump B', device_id=1, pin=27)
     devices['output']['relays'].append(pumpB)
     
-    led = Output.Relay('led', device_id=len(devices['output']['relays']), pin=22)
+    led = Output.Relay('led', device_id=2, pin=22)
     devices['output']['relays'].append(led)
     
-    adc = Sensor.ADS1115("adc A", device_id=len(devices['sensor']['adcs'])) # i2c pin, default address
+    adc = Sensor.ADS1115("adc A", device_id=0) # i2c pin, default address
     devices['sensor']['adcs'].append(adc)
     
-    waterLMSW = Sensor.Switch("Water LMSW", device_id=len(devices['sensor']['switchs']), pin=18)
+    waterLMSW = Sensor.Switch("Water LMSW", device_id=0, pin=18)
     devices['sensor']['switchs'].append(waterLMSW)
-    waterLMSW2 = Sensor.Switch("Water LMSW222", device_id=len(devices['sensor']['switchs']), pin=18)
+    waterLMSW2 = Sensor.Switch("Water LMSW222", device_id=1, pin=19)
     devices['sensor']['switchs'].append(waterLMSW2)
-    waterLMSW3 = Sensor.Switch("Water LMSW3333333", device_id=len(devices['sensor']['switchs']), pin=18)
+    waterLMSW3 = Sensor.Switch("Water LMSW3333333", device_id=2, pin=20)
     devices['sensor']['switchs'].append(waterLMSW3)
     
     FileManager.SaveObjAsJson("devices.json", devices)
@@ -105,6 +107,7 @@ async def device_manager():
 #    ## %Todo Add dynamic create new pump
 #    return {"status":"Pump xxx added", "new_pump":new_pump.name}
 
+#Get request
 @app.get("/relay")
 async def get_relays():
     return{"Relays":devices['output']['relays']}
@@ -169,3 +172,19 @@ async def get_record_tables():
 @app.get("/data/{dataTableName}")
 async def get_records(dataTableName: str):
     return db.GetRecords(dataTableName)
+
+#Post request
+@app.post("/relay")
+async def add_relay(new_relay : Output.Relay = Depends()):
+    #<todo> Add new relay to device list, then save it to json file
+    #check if device-id and pin of new device in not duplicate
+    if not any(saved_relay.device_id == new_relay.device_id for saved_relay in devices['output']['relays'])\
+    and not any(saved_relay.pin == new_relay.pin for saved_relay in devices['output']['relays']):
+      devices['output']['relays'].append(new_relay)
+      FileManager.SaveObjAsJson("devices.json", devices)
+      return {"status": "ok", "new_device": new_relay}
+    else:
+        if any(saved_relay.device_id == new_relay.device_id for saved_relay in devices['output']['relays']):
+          return {"status": "Error. Duplicate device_id, try another"}
+        else:
+          return {"status": "Error. Duplicate GPIO pin, try another"}
