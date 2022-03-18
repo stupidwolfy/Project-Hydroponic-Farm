@@ -3,8 +3,13 @@ import time
 import RPi.GPIO as GPIO
 import Adafruit_ADS1x15
 import random
+import board
+import busio
+import adafruit_sht31d
 
 GPIO.setmode(GPIO.BCM)
+
+i2c = board.I2C()
 
 def mapRange(value, inMin, inMax, outMin, outMax):
     return outMin + (((value - inMin) / (inMax - inMin)) * (outMax - outMin))
@@ -156,4 +161,16 @@ class WaterLevel(Sensor):
 
         waterLeftPercent = mapRange(self.currentDistance, self.fullDistance, self.emptyDistance, 0, 100)
         return waterLeftPercent
+    
+class SHT31(I2cSensor):
+    def __init__(self, name, device_id, address=None):
+        super().__init__(name, device_id, address)
+        self.sensor = adafruit_sht31d.SHT31D(i2c)
+
+    def Get_temp(self):
+        return round(self.sensor.temperature, 2)
+
+    def Get_Humid(self):
+        return round(self.sensor.relative_humidity, 2)
+
     
