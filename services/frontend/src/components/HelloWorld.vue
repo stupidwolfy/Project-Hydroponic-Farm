@@ -1,71 +1,31 @@
 <template>
-  <v-container>
-    <v-sparkline
-    class="stackSheet"
-      :value="value1"
-      :gradient="gradient"
-      :smooth="radius || false"
-      :padding="padding"
-      :line-width="width"
-      :stroke-linecap="lineCap"
-      :gradient-direction="gradientDirection"
-      :fill="fill"
-      :type="type"
-      :auto-line-width="autoLineWidth"
-      auto-draw
-    ></v-sparkline>
-
-    <v-sparkline
-    class="stackSpark"
-      :value="value2"
-      :gradient="gradient"
-      :smooth="radius || false"
-      :padding="padding"
-      :line-width="width"
-      :stroke-linecap="lineCap"
-      :gradient-direction="gradientDirection"
-      :fill="fill"
-      :type="type"
-      :auto-line-width="autoLineWidth"
-      auto-draw
-    ></v-sparkline>
-  </v-container>
+  <div class="hello">
+    <h3>{{ msg }}</h3>
+    <p class="mb-2">The application is configured and ready to import our components. You will find MDB Vue docs <a href="https://mdbootstrap.com/docs/vue/" target="_blank">here</a>.</p>
+  </div>
 </template>
 
 <script>
-const gradients = [
-  ["#222"],
-  ["#42b3f4"],
-  ["red", "orange", "yellow"],
-  ["purple", "violet"],
-  ["#00c6ff", "#F0F", "#FF0"],
-  ["#f72047", "#ffd200", "#1feaea"],
-];
 export default {
-  name: "HelloWorld",
-
-  data: () => ({
-    width: 2,
-    radius: 10,
-    padding: 8,
-    lineCap: "round",
-    gradient: gradients[5],
-    value1: [0, 2, 5, 9, 5, 10, 3, 5, 0, 0, 1, 8, 2, 9, 10],
-    value2: [0, 3, 6, 7, 8, 10, 9, 0, 1, 0, 2, 4, 3, 8, 11],
-    gradientDirection: "top",
-    gradients,
-    fill: false,
-    type: "trend",
-    autoLineWidth: false,
-  }),
-};
-</script>
-<style lang="css" scoped>
-.stackSheet {
-  position: relative;
+  name: 'HelloWorld',
+  data () {
+    return {
+      msg: 'Welcome to Your MDB Vue.js App'
+    };
+  }
 }
-.stackSpark {
-  top: 0;
-  left: 0;
+</script>
+
+<!-- Add "scoped" attribute to limit CSS to this component only -->
+<style scoped>
+h3 {
+  font-weight: normal;
+  padding-top: 20px;
+  padding-bottom: 30px;
+}
+p {
+  color: #969696;
+  margin-bottom: 0;
+  font-size: 14px;
 }
 </style>
