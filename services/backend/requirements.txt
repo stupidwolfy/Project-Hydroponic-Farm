@@ -11,4 +11,4 @@ pydantic==1.8.2
 arrow #for time zone convertion
 jsonpickle #for save device setting 
 schedule #for repeat read sensor
-adafruit-blinka
+adafruit-circuitpython-sht31d
