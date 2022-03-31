@@ -1,13 +1,13 @@
 import dbm
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket
 from fastapi_utils.tasks import repeat_every
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
-
 import time
 import sched
+import asyncio
 import threading
 import random
 import io
@@ -60,9 +60,9 @@ def Background_DBAutoSave():
 
     #init scheduler
     scheduler = sched.scheduler(time.time, time.sleep)
-    devices['sensor']['switchs'][0].PeriodicSaveToDB(1, scheduler, (dbThread,))
-    devices['sensor']['switchs'][1].PeriodicSaveToDB(5, scheduler, (dbThread,))
-    devices['sensor']['switchs'][2].PeriodicSaveToDB(10, scheduler, (dbThread,))
+    devices['sensor']['switchs'][0].PeriodicSaveToDB(30, scheduler, (dbThread,))
+    devices['sensor']['switchs'][1].PeriodicSaveToDB(30, scheduler, (dbThread,))
+    devices['sensor']['switchs'][2].PeriodicSaveToDB(30, scheduler, (dbThread,))
     #devices['EC sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
     #devices['PH sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
     #devices['Light sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
@@ -72,6 +72,7 @@ def Background_DBAutoSave():
 
 # Start a thread to run the events
 t1 = threading.Thread(target=Background_DBAutoSave)
+t1.setDaemon(True)
 t1.start()
 
 db = DBManager.SqlLite("Sensor_history")
@@ -142,6 +143,13 @@ async def switch_state(number: int):
 async def get_temp():
     return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
 
+@app.websocket("/sensor/temp")
+async def websocket_get_ph(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        await websocket.send_json({"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)})
+        await asyncio.sleep(1)
+
 @app.get("/sensor/temp/raw")
 async def get_temp_raw():
     return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
@@ -153,6 +161,13 @@ async def get_water_temp():
 @app.get("/sensor/ph")
 async def get_ph():
     return {"ph": round(random.uniform(6.0, 7.0), 2)}
+
+@app.websocket("/sensor/ph")
+async def websocket_get_ph(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        await websocket.send_json({"ph": round(random.uniform(6.0, 7.0), 2)})
+        await asyncio.sleep(1)
 
 @app.get("/sensor/ec")
 async def get_ec():
@@ -188,3 +203,11 @@ async def add_relay(new_relay : Output.Relay = Depends()):
           return {"status": "Error. Duplicate device_id, try another"}
         else:
           return {"status": "Error. Duplicate GPIO pin, try another"}
+
+#Websocket
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        await websocket.send_text(f"Message text was: {data}")
