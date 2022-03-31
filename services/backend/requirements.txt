@@ -1,14 +1,13 @@
-fastapi==0.68.0
-fastapi-utils
-uvicorn==0.14.0 #ASGI server for Fast api 
-starlette #For Image stream 
-RPi.GPIO
-#imutils
-numpy #installed with apt-get
-#opencv-python===3.4.13.47 #installed with apt-get
-adafruit-ads1x15 #ADC library
+fastapi==0.75.0
+fastapi-utils==0.2.1 
+#uvicorn==0.17.6  #ASGI server for Fast api 
+uvicorn[standard]==0.17.6 
+starlette==0.17.1  #For Image stream 
+RPi.GPIO==0.7.1
+#numpy==1.22.3 #installed with apt-get
+adafruit-ads1x15==1.0.2 #ADC library
 pydantic==1.8.2
-arrow #for time zone convertion
-jsonpickle #for save device setting 
-schedule #for repeat read sensor
-adafruit-circuitpython-sht31d
+arrow==1.2.2 #for time zone convertion
+jsonpickle==2.1.0 #for save device setting 
+schedule==1.1.0 #for repeat read sensor
+adafruit-circuitpython-sht31d==2.3.10 
