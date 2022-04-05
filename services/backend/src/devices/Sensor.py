@@ -42,9 +42,10 @@ class AnalogSensor(Sensor):
         self.analogDevice = analogDevice
 
 class ADS1115(I2cSensor):
-    def __init__(self, name, device_id, gain=1,  address=None):
+    def __init__(self, name, device_id, gain=2/3,  address=None):
         super().__init__(name, device_id, address)
         self.gain = gain
+        self.values = [-1,-1,-1,-1]
         if (address is None):
             self.adc = Adafruit_ADS1x15.ADS1115()
         else:
@@ -52,7 +53,7 @@ class ADS1115(I2cSensor):
 
     def update(self):
         self.values = [0]*4
-        if (True): #Testmode
+        if (False): #Testmode
             for i in range(4):
                 self.values[i] = random.randint(0, 1023)
         else:
