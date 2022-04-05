@@ -26,7 +26,7 @@ HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 devices = FileManager.LoadObjFromJson("devices.json")
 #create device if no json file
 if devices is None:
-    devices = {'output':{ 'relays': []},'sensor':{ 'adcs': [], 'switchs': []}}
+    devices = {'output':{ 'relays': []},'sensor':{ 'adcs': [], 'switchs': [], 'air-temp': []}}
 
     #Test create device object. Should remove after Load/Save json is coded
     pumpA = Output.Relay('Pump A', device_id=0, pin=17)
@@ -46,6 +46,9 @@ if devices is None:
     devices['sensor']['switchs'].append(waterLMSW2)
     waterLMSW3 = Sensor.Switch("Water LMSW3333333", device_id=2, pin=20)
     devices['sensor']['switchs'].append(waterLMSW3)
+
+    airtempSensor = Sensor.SHT31("air temp indoor", 0)
+    devices['sensor']['air-temp'].append(airtempSensor)
     
     FileManager.SaveObjAsJson("devices.json", devices)
 
@@ -140,7 +143,10 @@ async def switch_state(number: int):
 
 @app.get("/sensor/temp")
 async def get_temp():
-    return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
+    temp = devices['sensor']['air-temp'][0].Get_temp()
+    humid = devices['sensor']['air-temp'][0].Get_Humid()
+    #return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
+    return {"temp": temp, "humid": humid}
 
 @app.get("/sensor/temp/raw")
 async def get_temp_raw():
