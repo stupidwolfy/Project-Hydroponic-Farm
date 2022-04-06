@@ -146,7 +146,7 @@
               <mdb-card>
                   <mdb-card-body>
                       <div style="display: block">
-                        <mdb-bar-chart :data="barChartData" :options="barChartOptions" :height="500"/>
+                        <mdb-line-chart :data="lineChartData" :options="lineChartOptions" :height="500"/>
                       </div>
                   </mdb-card-body>
               </mdb-card>
@@ -584,7 +584,7 @@
 </template>
 
 <script>
-import { mdbRow, mdbCol, mdbBtn, mdbCard, mdbCardBody, mdbCardHeader, mdbCardText, mdbIcon, mdbTbl, mdbBarChart, mdbPieChart, mdbLineChart, mdbRadarChart, mdbDoughnutChart, mdbListGroup, mdbListGroupItem, mdbBadge, mdbModal, mdbModalHeader, mdbModalTitle, mdbModalBody, mdbModalFooter } from 'mdbvue'
+import { mdbRow, mdbCol, mdbBtn, mdbCard, mdbCardBody, mdbCardHeader, mdbCardText, mdbIcon, mdbTbl, mdbPieChart, mdbLineChart, mdbRadarChart, mdbDoughnutChart, mdbListGroup, mdbListGroupItem, mdbBadge, mdbModal, mdbModalHeader, mdbModalTitle, mdbModalBody, mdbModalFooter } from 'mdbvue'
 import axios from 'axios';
 export default {
   name: 'Dashboard',
@@ -598,7 +598,6 @@ export default {
     mdbCardText,
     mdbIcon,
     mdbTbl,
-    mdbBarChart,
     mdbPieChart,
     mdbLineChart,
     mdbRadarChart,
@@ -628,49 +627,6 @@ export default {
       showFluidModalLeft: false,
       showFluidModalTop: false,
       showFluidModalBottom: false,
-      barChartData: {
-        labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
-        datasets: [
-          {
-            label: '#1',
-            data: [12, 39, 3, 50, 2, 32, 84],
-            backgroundColor: 'rgba(245, 74, 85, 0.5)',
-            borderWidth: 1
-          }, {
-            label: '#2',
-            data: [56, 24, 5, 16, 45, 24, 8],
-            backgroundColor: 'rgba(90, 173, 246, 0.5)',
-            borderWidth: 1
-          }, {
-            label: '#3',
-            data: [12, 25, 54, 3, 15, 44, 3],
-            backgroundColor: 'rgba(245, 192, 50, 0.5)',
-            borderWidth: 1
-          }
-        ]
-      },
-      barChartOptions: {
-        responsive: true,
-        maintainAspectRatio: false,
-        scales: {
-          xAxes: [{
-            barPercentage: 1,
-            gridLines: {
-              display: true,
-              color: 'rgba(0, 0, 0, 0.1)'
-            }
-          }],
-          yAxes: [{
-            gridLines: {
-              display: true,
-              color: 'rgba(0, 0, 0, 0.1)'
-            },
-            ticks: {
-              beginAtZero: true
-            }
-          }]
-        }
-      },
       pieChartData: {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
         datasets: [
@@ -689,19 +645,9 @@ export default {
         labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'],
         datasets: [
           {
-            label: '#1',
+            label: 'PH',
             backgroundColor: 'rgba(245, 74, 85, 0.5)',
-            data: [65, 59, 80, 81, 56, 55, 40]
-          },
-          {
-            label: '#2',
-            backgroundColor: 'rgba(90, 173, 246, 0.5)',
-            data: [12, 42, 121, 56, 24, 12, 2]
-          },
-          {
-            label: '#3',
-            backgroundColor: 'rgba(245, 192, 50, 0.5)',
-            data: [2, 123, 154, 76, 54, 23, 5]
+            data: [],
           }
         ]
       },
@@ -711,7 +657,7 @@ export default {
         scales: {
           xAxes: [{
             gridLines: {
-              display: true,
+              display: false,
               color: 'rgba(0, 0, 0, 0.1)'
             }
           }],
@@ -763,6 +709,7 @@ export default {
       },
       temp:'',
       humidity:'',
+      phData: [],
     }
   },
   methods: {
@@ -776,9 +723,27 @@ export default {
           console.log(error);
         });
     },
+    getPHData() {
+      axios.get('/data/Sensor_Water_LMSW222')
+        .then((res) => {
+          this.phData = res.data.data;
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    }
   },
   created() {
-    this.interval1 = setInterval(() => this.getTemp(), 5000);
+    //this.interval1 = setInterval(() => this.getTemp(), 5000);
+    this.getPHData();
+  },
+  watch:{
+    phData (newData){
+      const data = this.lineChartData;
+      data.datasets[0].data = newData.map(x => x[1]);
+      data.labels = newData.map(x => x[0]);
+      this.lineChartData = {...data};
+    }
   },
 }
 </script>
