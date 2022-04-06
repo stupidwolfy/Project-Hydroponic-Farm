@@ -6,6 +6,12 @@ import App from './App'
 import router from './router'
 import store from './store'
 import * as VueGoogleMaps from 'vue2-google-maps'
+import axios from 'axios';
+
+
+axios.defaults.withCredentials = true;
+axios.defaults.baseURL = 'http://raspberrypi.local:5000';  // the FastAPI backend
+
 
 Vue.use(VueGoogleMaps, {
   load: {

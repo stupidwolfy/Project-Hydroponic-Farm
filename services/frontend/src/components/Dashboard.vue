@@ -16,24 +16,44 @@
         <mdb-col xl="3" md="6" class="mb-r">
           <mdb-card cascade class="cascading-admin-card">
             <div class="admin-up">
-              <mdb-icon icon="money-bill-alt" far class="primary-color"/>
+              <mdb-icon icon="thermometer-half" far class="primary-color"/>
               <div class="data">
                 <p>Temp</p>
                 <h4>
-                  <strong>25</strong>
+                  <strong>{{ temp }}</strong>
+                </h4>
+              </div>
+            </div>
+            <mdb-card-body>
+              <div class="progress">
+                <div aria-valuemax="100" aria-valuemin="0" aria-valuenow="25" :class="['progress-bar', temp > 30 ? 'bg-warning ' : 'bg-primary']" role="progressbar"
+                  v-bind:style="'width:' + temp + '%'"></div>
+              </div>
+              <mdb-card-text>Max temp 100</mdb-card-text>
+            </mdb-card-body>
+          </mdb-card>
+        </mdb-col>
+        
+        <mdb-col xl="3" md="6" class="mb-r">
+          <mdb-card cascade class="cascading-admin-card">
+            <div class="admin-up">
+              <mdb-icon icon="money-bill-alt" far class="primary-color"/>
+              <div class="data">
+                <p>humidity</p>
+                <h4>
+                  <strong>{{ humidity }}</strong>
                 </h4>
               </div>
             </div>
             <mdb-card-body>
               <div class="progress">
                 <div aria-valuemax="100" aria-valuemin="0" aria-valuenow="25" class="progress-bar bg-primary" role="progressbar"
-                  style="width: 50%"></div>
+                  v-bind:style="'width:' + humidity + '%'"></div>
               </div>
               <mdb-card-text>Better than last week (25%)</mdb-card-text>
             </mdb-card-body>
           </mdb-card>
         </mdb-col>
-        
         <!-- <mdb-col xl="3" md="6" class="mb-r">
           <mdb-card cascade class="cascading-admin-card">
             <div class="admin-up">
@@ -565,7 +585,7 @@
 
 <script>
 import { mdbRow, mdbCol, mdbBtn, mdbCard, mdbCardBody, mdbCardHeader, mdbCardText, mdbIcon, mdbTbl, mdbBarChart, mdbPieChart, mdbLineChart, mdbRadarChart, mdbDoughnutChart, mdbListGroup, mdbListGroupItem, mdbBadge, mdbModal, mdbModalHeader, mdbModalTitle, mdbModalBody, mdbModalFooter } from 'mdbvue'
-
+import axios from 'axios';
 export default {
   name: 'Dashboard',
   components: {
@@ -740,9 +760,26 @@ export default {
       doughnutChartOptions: {
         responsive: true,
         maintainAspectRatio: false
-      }
+      },
+      temp:'',
+      humidity:'',
     }
-  }
+  },
+  methods: {
+    getTemp() {
+      axios.get('/sensor/temp')
+        .then((res) => {
+          this.temp = res.data.temp;
+          this.humidity = res.data.humid;
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+  },
+  created() {
+    this.interval1 = setInterval(() => this.getTemp(), 5000);
+  },
 }
 </script>
 
