@@ -13,6 +13,7 @@ import random
 import io
 import os
 from starlette.responses import StreamingResponse
+from sqlite3 import OperationalError
 import RPi.GPIO as GPIO
 
 from src import DBManager, FileManager
@@ -36,9 +37,14 @@ if devices is None:
     
     led = Output.Relay('led', device_id=2, pin=22)
     devices['output']['relays'].append(led)
-    
-    adc = Sensor.ADS1115("adc A", device_id=0) # i2c pin, default address
-    devices['sensor']['adcs'].append(adc)
+
+    try:
+        adc = Sensor.ADS1115("adc A", device_id=devices['sensor']['adcs'].count) # i2c pin, default address
+        devices['sensor']['adcs'].append(adc)
+        airtempSensor = Sensor.SHT31("air temp indoor", 0)
+        devices['sensor']['air-temp'].append(airtempSensor)
+    except ValueError:
+        pass
     
     waterLMSW = Sensor.Switch("Water LMSW", device_id=0, pin=18)
     devices['sensor']['switchs'].append(waterLMSW)
@@ -47,8 +53,7 @@ if devices is None:
     waterLMSW3 = Sensor.Switch("Water LMSW3333333", device_id=2, pin=20)
     devices['sensor']['switchs'].append(waterLMSW3)
 
-    airtempSensor = Sensor.SHT31("air temp indoor", 0)
-    devices['sensor']['air-temp'].append(airtempSensor)
+    
     
     FileManager.SaveObjAsJson("devices.json", devices)
 
@@ -121,7 +126,7 @@ async def pump_state(number: int):
     try:
         return {devices['output']['relays'][number]}
     except IndexError:
-        raise HTTPException(status_code=404, detail="Item not found")
+        return {"status": "Error", "detail": "Device not found."}
 
 @app.get("/relay/{number}/{power}")
 async def relay_control(number: int, power: bool):
@@ -133,19 +138,23 @@ async def relay_control(number: int, power: bool):
             devices['output']['relays'][number].OFF()
         return {devices['output']['relays'][number].name: power}
     except IndexError:
-        raise HTTPException(status_code=404, detail="Item not found")
+        return {"status": "Error", "detail": "Device not found."}
 
 @app.get("/switch/{number}")
 async def switch_state(number: int):
     try:
         return {"name":devices['sensor']['switchs'][number].name, "value":devices['sensor']['switchs'][number].getState == 0}
     except IndexError:
-        raise HTTPException(status_code=404, detail="Item not found")
+        return {"status": "Error", "detail": "Device not found."}
 
 @app.get("/sensor/temp")
 async def get_temp():
-    temp = devices['sensor']['air-temp'][0].Get_temp()
-    humid = devices['sensor']['air-temp'][0].Get_Humid()
+    try:
+        temp = devices['sensor']['air-temp'][0].Get_temp()
+        humid = devices['sensor']['air-temp'][0].Get_Humid()
+    except IndexError:
+        return {"status": "Error", "detail": "Device not found."}
+
     #return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
     return {"temp": temp, "humid": humid}
 
@@ -155,10 +164,6 @@ async def websocket_get_ph(websocket: WebSocket):
     while True:
         await websocket.send_json({"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)})
         await asyncio.sleep(1)
-
-@app.get("/sensor/temp/raw")
-async def get_temp_raw():
-    return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
 
 @app.get("/sensor/water_temp")
 async def get_water_temp():
@@ -183,7 +188,7 @@ async def get_ec():
 async def get_image():
     live_img = CamHandler.GetImage(180)
     if live_img is None:
-        raise HTTPException(status_code=404, detail="Camera not found")
+        return {"status": "Error", "detail": "Device not found."}
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
 
 @app.get("/data")
@@ -192,7 +197,10 @@ async def get_record_tables():
 
 @app.get("/data/{dataTableName}")
 async def get_records(dataTableName: str):
-    return db.GetRecords(dataTableName)
+    try:
+        return db.GetRecords(dataTableName)
+    except OperationalError as e:
+        return {"status": "Error", "detail": str(e)}
 
 #Post request
 @app.post("/relay")
@@ -203,12 +211,12 @@ async def add_relay(new_relay : Output.Relay = Depends()):
     and not any(saved_relay.pin == new_relay.pin for saved_relay in devices['output']['relays']):
       devices['output']['relays'].append(new_relay)
       FileManager.SaveObjAsJson("devices.json", devices)
-      return {"status": "ok", "new_device": new_relay}
+      return {"status": "ok", "detail": new_relay}
     else:
         if any(saved_relay.device_id == new_relay.device_id for saved_relay in devices['output']['relays']):
-          return {"status": "Error. Duplicate device_id, try another"}
+          return {"status": "Error", "detail": "Duplicate device_id, try another"}
         else:
-          return {"status": "Error. Duplicate GPIO pin, try another"}
+          return {"status": "Error", "detail": "Duplicate GPIO pin, try another"}
 
 #Websocket
 @app.websocket("/ws")

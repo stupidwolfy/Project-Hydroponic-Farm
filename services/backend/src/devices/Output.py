@@ -1,7 +1,6 @@
 from abc import ABC, abstractmethod
 import time
 import RPi.GPIO as GPIO
-import Adafruit_ADS1x15
 import random
 from typing import Optional
 from fastapi import Body

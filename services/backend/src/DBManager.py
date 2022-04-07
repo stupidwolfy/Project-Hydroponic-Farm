@@ -1,10 +1,29 @@
 import sqlite3
 from contextlib import closing
 from datetime import datetime, timezone
+from abc import ABC, abstractmethod
+from typing import List
 
 from numpy import empty
 
-class SqlLite:
+class DBManager(ABC):
+    @abstractmethod
+    def __init__(self, name:str):
+        pass
+
+    @abstractmethod
+    def CreateDataTable(self, tableName:str, tableHeaders:List[str]):
+        pass
+
+    @abstractmethod
+    def Append(self, tableName:str, recordList:List):
+        pass
+
+    @abstractmethod
+    def GetRecords(self, tableName:str=None, firstID = -1, lastID = -1):
+        pass
+
+class SqlLite(DBManager):
     def __init__(self, name):
         self.name = name
         #self.con = sqlite3.connect('./DB/' +name+'.db')

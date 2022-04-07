@@ -5,9 +5,10 @@ uvicorn[standard]==0.17.6
 starlette==0.17.1  #For Image stream 
 RPi.GPIO==0.7.1
 #numpy==1.22.3 #installed with apt-get
-adafruit-ads1x15==1.0.2 #ADC library
+#adafruit-ads1x15==1.0.2 # DEPRECATED
+adafruit-circuitpython-ads1x15==2.2.13 #ADC library
+adafruit-circuitpython-sht31d==2.3.10 #Air Temp/Humid library
 pydantic==1.8.2
 arrow==1.2.2 #for time zone convertion
 jsonpickle==2.1.0 #for save device setting 
 schedule==1.1.0 #for repeat read sensor
-adafruit-circuitpython-sht31d==2.3.10 
