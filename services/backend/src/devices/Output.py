@@ -4,10 +4,21 @@ import RPi.GPIO as GPIO
 import random
 from typing import Optional
 from fastapi import Body
+from typing import AnyStr, Callable, Tuple
+import sched
+from src import DBManager
 
-GPIO.setmode(GPIO.BCM)   
+GPIO.setmode(GPIO.BCM) # Use GPIOxx number
 
-class Relay:
+class Repeatable:
+    #To make some methode run repeatly
+    #For performance and safety, change interval to 1min (X60sec) instead of 1sec 
+    def PeriodicTask(self, func:Callable, interval:int, scheduler:sched.scheduler, args:Tuple):
+        func(*args)
+        scheduler.enter(interval*60, 1, self.PeriodicTask,
+                        (func, interval, scheduler, args))
+
+class Relay(Repeatable):
     #when loaded from file
     def __getinitargs__(self):
         return self.name, self.device_id, self.pin, self.activeLOW
@@ -51,4 +62,11 @@ class Relay:
 
     def getState(self):
         return GPIO.input(self.pin)
+
+    def SaveToDB(self, db:DBManager.DBManager):
+        db.CreateDataTable(self.name, ["data"])
+        db.Append(self.name, [self.getState()])
+
+    def AutoSaveToDB(self, interval:int, scheduler:sched.scheduler, args:Tuple):
+        return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
 

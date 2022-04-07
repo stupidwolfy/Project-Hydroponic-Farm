@@ -30,6 +30,7 @@ class SqlLite(DBManager):
 
     def CreateDataTable(self, tableName, tableHeaders):
         tableName = tableName.replace(" ", "_")
+        tableName = tableName.replace("-", "_")
         #cur =  self.con.cursor()
         #cur.execute("create table if not exists "+ tableName +"(" + "Time_Stamp, " +','.join(tableHeaders)+")")
         
