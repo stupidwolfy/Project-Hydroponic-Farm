@@ -5,17 +5,19 @@ import random
 import board
 import busio
 import sched
-from typing import AnyStr, Callable, Tuple
+from typing import AnyStr, Callable, Tuple, Optional
 from src import DBManager
 #import Adafruit_ADS1x15 # DEPRECATED
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 import adafruit_sht31d
 import math
+from pydantic import BaseModel
 
 GPIO.setmode(GPIO.BCM)
 
 i2c = board.I2C()
+
 
 class Repeatable:
     #To make some methode run repeatly
@@ -272,3 +274,38 @@ class TDSSensor(AnalogSensor, Repeatable):
     def AutoSaveToDB(self, interval:int, scheduler:sched.scheduler, args:Tuple):
         return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
 
+#Model class
+class SHT31Model(BaseModel):
+    name:str
+    device_id:int
+    address:int
+
+class TempSensorModel(BaseModel):
+    name:str
+    device_id:int
+    ADCDevice:ADS1115
+    ADCChannel:int
+    multiplier: Optional[float]
+
+    class Config:
+        arbitrary_types_allowed = True
+
+class PHSensorModel(BaseModel):
+    name:str
+    device_id:int
+    ADCDevice:ADS1115
+    ADCChannel:int
+    m:Optional[float]
+    b:Optional[float]
+    
+    class Config:
+        arbitrary_types_allowed = True
+
+class TDSSensorModel(BaseModel):
+    name:str
+    device_id:int
+    ADCDevice:ADS1115
+    ADCChannel:int
+
+    class Config:
+        arbitrary_types_allowed = True
