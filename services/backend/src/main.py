@@ -65,6 +65,17 @@ if devices is None:
     saveResult = FileManager.SaveObjAsJson("devices.json", devices)
     print(f"Save result: {saveResult}")
 
+else:
+    for relay in devices['relays']:
+        relay.Setup()
+
+    if 'adc' in devices['sensor']:
+        devices['sensor']['adc'].Setup()
+    if 'sht31' in devices['sensor']:
+        devices['sensor']['sht31'].Setup()
+    if 'switchs' in devices['sensor']:
+        devices['sensor']['switchs'].Setup()
+
 # do background save sensor data to DB
 
 def Background_DBAutoSave():
@@ -142,9 +153,9 @@ async def pump_state(number: int):
 
 @app.put("/relay/{number}")
 async def edit_relay(number: int, new_relay: Output.RelayModel):
-    new_relay = Output.Relay(new_relay)
-
     if len(devices['relays']) >= number:
+        new_relay = Output.Relay(new_relay, devices['relays'][number].device_id, devices['relays'][number].pin)
+
         devices['relays'][number] = new_relay
         FileManager.SaveObjAsJson("devices.json", devices)
         return {"status": "ok", "detail": new_relay}
