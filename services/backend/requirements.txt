@@ -12,3 +12,11 @@ pydantic==1.8.2
 arrow==1.2.2 #for time zone convertion
 jsonpickle==2.1.0 #for save device setting 
 schedule==1.1.0 #for repeat read sensor
+
+#firebase dependencies 
+gcloud==0.18.3
+sseclient==0.0.27
+pycrypto==2.6.1
+requests-toolbelt==0.9.1
+python_jwt==3.3.2
+firebase==3.0.1

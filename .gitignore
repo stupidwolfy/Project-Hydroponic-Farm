@@ -2,6 +2,7 @@
 services/backend/src/DB/Sensor_history.db
 services/backend/src/Config/devices.json
 #Python
+services/backend/src/Config.py
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
@@ -229,4 +230,3 @@ bundles/
 vendor/pkg/
 pyenv
 Vagrantfile
-services/backend/src/Config.py
