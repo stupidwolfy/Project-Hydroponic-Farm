@@ -229,3 +229,4 @@ bundles/
 vendor/pkg/
 pyenv
 Vagrantfile
+services/backend/src/Config.py
