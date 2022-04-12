@@ -22,20 +22,21 @@ from src.devices import Output, Sensor, CamHandler
 HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 
 devices = FileManager.LoadObjFromJson("devices.json")
+GPIO.cleanup()
 # create device if no json file
 if devices is None:
     print("Device config file not found, createing...")
     devices = {'relays': [], 'sensor': {}}
 
     # Create Relay
-    relay1 = Output.Relay('Fertilizer-A', device_id=0, pin=24)
-    relay2 = Output.Relay('Fertilizer-B', device_id=1, pin=17)
-    relay3 = Output.Relay('PH-Down-Agent', device_id=2, pin=18)
-    relay4 = Output.Relay('LED-1', device_id=3, pin=22)
-    relay5 = Output.Relay('LED-2', device_id=4, pin=5)
-    relay6 = Output.Relay('FAN-1', device_id=5, pin=6)
-    relay7 = Output.Relay('Pump-Add-Water', device_id=6, pin=13)
-    relay8 = Output.Relay('Pump-Cycle', device_id=7, pin=26)
+    relay1 = Output.Relay('Fertilizer-A', device_id=0, pin=24, activeLOW=True)
+    relay2 = Output.Relay('Fertilizer-B', device_id=1, pin=17, activeLOW=True)
+    relay3 = Output.Relay('PH-Down-Agent', device_id=2, pin=18, activeLOW=True)
+    relay4 = Output.Relay('LED-1', device_id=3, pin=22, activeLOW=True)
+    relay5 = Output.Relay('LED-2', device_id=4, pin=5, activeLOW=True)
+    relay6 = Output.Relay('FAN-1', device_id=5, pin=6, activeLOW=True)
+    relay7 = Output.Relay('Pump-Add-Water', device_id=6, pin=13, activeLOW=True)
+    relay8 = Output.Relay('Pump-Cycle', device_id=7, pin=26, activeLOW=True)
 
     devices['relays'] = [relay1, relay2, relay3,
                          relay4, relay5, relay6, relay7, relay8]
@@ -183,6 +184,8 @@ async def switch_state():
     except IndexError:
         return {"status": "Error", "detail": "Device not found."}
 
+    except KeyError:
+        return {"status": "Error", "detail": "Device not setup."}
 
 @app.get("/sensor/temp")
 async def get_temp():
@@ -192,6 +195,9 @@ async def get_temp():
         return {"temp": temp, "humid": humid}
     except IndexError:
         return {"status": "Error", "detail": "Device is not connected."}
+    
+    except KeyError:
+        return {"status": "Error", "detail": "Device is not setup."}
 
 
 @app.websocket("/sensor/temp")

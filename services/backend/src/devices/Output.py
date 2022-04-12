@@ -54,17 +54,33 @@ class Relay(Repeatable):
         
     def ON(self):
         self.isON = True
-        if (self.activeLOW is True):
-            GPIO.output(self.pin, 0)
-        else:
-            GPIO.output(self.pin, 1)
+        try:
+            if (self.activeLOW is True):
+                GPIO.output(self.pin, 0)
+            else:
+                GPIO.output(self.pin, 1)
+            
+        except RuntimeError:
+            self.Setup()
+            if (self.activeLOW is True):
+                GPIO.output(self.pin, 0)
+            else:
+                GPIO.output(self.pin, 1)
 
     def OFF(self):
         self.isON = False
-        if (self.activeLOW is True):
-            GPIO.output(self.pin, 1)
-        else:
-            GPIO.output(self.pin, 0)
+        try:
+            if (self.activeLOW is True):
+                GPIO.output(self.pin, 1)
+            else:
+                GPIO.output(self.pin, 0)
+            
+        except RuntimeError:
+            self.Setup()
+            if (self.activeLOW is True):
+                GPIO.output(self.pin, 1)
+            else:
+                GPIO.output(self.pin, 0)
 
     def setState(self, state):
         GPIO.output(self.pin, state)
