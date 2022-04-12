@@ -155,11 +155,13 @@
             
               <mdb-card class="mb-4">
                   <mdb-card-header class="text-center"> Pie chart </mdb-card-header>
-                  <mdb-card-body>
-                      <div style="display: block">
-                        <mdb-pie-chart :data="pieChartData" :options="pieChartOptions" :height="200"/>
-                      </div>
-                  </mdb-card-body>
+                  
+                  <mdb-btn color="primary" size="sm" v-on:click= "RelayControl(0)" @click="isToggled[0] = !isToggled[0]">Bottom 0</mdb-btn>
+                  <mdb-btn color="primary" size="sm" v-on:click= "RelayControl(1)" @click="isToggled[1] = !isToggled[1]">Bottom 1</mdb-btn>
+                  <mdb-btn color="primary" size="sm" v-on:click= "RelayControl(2)" @click="isToggled[2] = !isToggled[2]">Bottom 2</mdb-btn>
+                  <mdb-btn color="primary" size="sm" v-on:click= "RelayControl(3)" @click="isToggled[3] = !isToggled[3]">Bottom 3</mdb-btn>
+
+                  
               </mdb-card>
 
               <mdb-card class="mb-4">
@@ -584,7 +586,7 @@
 </template>
 
 <script>
-import { mdbRow, mdbCol, mdbBtn, mdbCard, mdbCardBody, mdbCardHeader, mdbCardText, mdbIcon, mdbTbl, mdbPieChart, mdbLineChart, mdbRadarChart, mdbDoughnutChart, mdbListGroup, mdbListGroupItem, mdbBadge, mdbModal, mdbModalHeader, mdbModalTitle, mdbModalBody, mdbModalFooter } from 'mdbvue'
+import { mdbRow, mdbCol, mdbBtn, mdbCard, mdbCardBody, mdbCardHeader, mdbCardText, mdbIcon, mdbTbl, mdbLineChart, mdbRadarChart, mdbDoughnutChart, mdbListGroup, mdbListGroupItem, mdbBadge, mdbModal, mdbModalHeader, mdbModalTitle, mdbModalBody, mdbModalFooter } from 'mdbvue'
 import axios from 'axios';
 export default {
   name: 'Dashboard',
@@ -598,7 +600,6 @@ export default {
     mdbCardText,
     mdbIcon,
     mdbTbl,
-    mdbPieChart,
     mdbLineChart,
     mdbRadarChart,
     mdbDoughnutChart,
@@ -609,7 +610,7 @@ export default {
     mdbModalHeader,
     mdbModalTitle,
     mdbModalBody,
-    mdbModalFooter
+    mdbModalFooter,
   },
   data () {
     return {
@@ -647,7 +648,7 @@ export default {
           {
             label: 'PH',
             backgroundColor: 'rgba(245, 74, 85, 0.5)',
-            data: [],
+            data: [1,2,3],
           }
         ]
       },
@@ -710,6 +711,7 @@ export default {
       temp:'',
       humidity:'',
       phData: [],
+      isToggled: [false, false, false, false, false, false, false, false],
     }
   },
   methods: {
@@ -724,18 +726,40 @@ export default {
         });
     },
     getPHData() {
-      axios.get('/data/Sensor_Water_LMSW222')
+      axios.get('/data/Water_LMSW')
         .then((res) => {
           this.phData = res.data.data;
+          console.log(res.data.data);
         })
         .catch((error) => {
           console.log(error);
         });
+    },
+    RelayControl(number) {
+      console.log("Relays: " + this.isToggled)
+      axios.get(`/relay/${number}/${this.isToggled[number]}`)
+      .then(() => {
+         //console.log(res.data);
+        })
+        .catch((error) => {
+          console.log(error);
+        });
+    },
+    getStatusRelay() {
+      axios.get('/relay')
+      .then((res) =>{
+        for (let i = 0; i < 8; i++){
+          //this.isToggled[i] = res.data.Relays[i].isOn
+          this.isToggled[i] = true
+        }
+        console.log("Status: "+ res.data.Relays[0].isOn);
+      })
     }
   },
   created() {
     //this.interval1 = setInterval(() => this.getTemp(), 5000);
     this.getPHData();
+    this.getStatusRelay();
   },
   watch:{
     phData (newData){
