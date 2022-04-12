@@ -264,9 +264,9 @@ async def get_record_tables():
 
 
 @app.get("/data/{dataTableName}")
-async def get_records(dataTableName: str):
+async def get_records(dataTableName: str, limit: int = -1):
     try:
-        return db.GetRecords(dataTableName)
+        return db.GetRecords(dataTableName, limit)
     except OperationalError as e:
         return {"status": "Error", "detail": str(e)}
 

@@ -61,7 +61,7 @@ class SqlLite(DBManager):
                         ", ?"*(len(recordList)-1) + ")", recordList)
             # return cur.fetchall()
 
-    def GetRecords(self, tableName=None, firstID=-1, lastID=-1):
+    def GetRecords(self, tableName=None, limit=-1):
         #cur = self.con.cursor()
         db_name = './DB/' + self.name+'.db'
         with closing(sqlite3.connect(db_name)) as con, con, closing(con.cursor()) as cur:
@@ -75,25 +75,11 @@ class SqlLite(DBManager):
             else:
                 # cur.row_factory = lambda cursor, row: row[0] #if prefer list instread of tuple
                 sql = "SELECT * FROM " + tableName
+                sql += " ORDER BY Time_Stamp DESC"
 
-                # Filter form x row to x row
-                if firstID > -1 or lastID > -1:
-                    sql += " WHERE"
-
-                    if firstID > -1 and lastID == -1:
-                        sql += " rowid >=? "
-                        cur.execute(sql, [firstID])
-
-                    elif firstID == -1 and lastID > -1:
-                        sql += " rowid <=? "
-                        cur.execute(sql, [lastID])
-
-                    elif firstID > -1 and lastID > -1:
-                        sql += " rowid BETWEEN ? AND ?"
-                        cur.execute(sql, [firstID, lastID])
-
-                else:
-                    cur.execute(sql)
+                if limit > -1:
+                    sql += " LIMIT " + str(limit)
+                cur.execute(sql)
 
                 # Trim 'None' from get table name
                 # from (('Tablename1', None, None,....),('Tablename2', None, None,....))
