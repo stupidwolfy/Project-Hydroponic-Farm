@@ -1,18 +1,18 @@
 import dbm
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket
 from fastapi_utils.tasks import repeat_every
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-
 
 import time
 import sched
+import asyncio
 import threading
 import random
 import io
 import os
 from starlette.responses import StreamingResponse
+from sqlite3 import OperationalError
 import RPi.GPIO as GPIO
 
 from src import DBManager, FileManager
@@ -21,65 +21,94 @@ from src.devices import Output, Sensor, CamHandler
 
 HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 
-#tempData = []
-
 devices = FileManager.LoadObjFromJson("devices.json")
-#create device if no json file
+# create device if no json file
 if devices is None:
-    devices = {'output':{ 'relays': []},'sensor':{ 'adcs': [], 'switchs': [], 'air-temp': []}}
+    print("Device config file not found, createing...")
+    devices = {'relays': [], 'sensor': {}}
 
-    #Test create device object. Should remove after Load/Save json is coded
-    pumpA = Output.Relay('Pump A', device_id=0, pin=17)
-    devices['output']['relays'].append(pumpA)
-    pumpB = Output.Relay('Pump B', device_id=1, pin=27)
-    devices['output']['relays'].append(pumpB)
-    
-    led = Output.Relay('led', device_id=2, pin=22)
-    devices['output']['relays'].append(led)
-    
-    adc = Sensor.ADS1115("adc A", device_id=0) # i2c pin, default address
-    devices['sensor']['adcs'].append(adc)
-    
-    waterLMSW = Sensor.Switch("Water LMSW", device_id=0, pin=18)
-    devices['sensor']['switchs'].append(waterLMSW)
-    waterLMSW2 = Sensor.Switch("Water LMSW222", device_id=1, pin=19)
-    devices['sensor']['switchs'].append(waterLMSW2)
-    waterLMSW3 = Sensor.Switch("Water LMSW3333333", device_id=2, pin=20)
-    devices['sensor']['switchs'].append(waterLMSW3)
+    # Create Relay
+    relay1 = Output.Relay('Fertilizer-A', device_id=0, pin=24)
+    relay2 = Output.Relay('Fertilizer-B', device_id=1, pin=17)
+    relay3 = Output.Relay('PH-Down-Agent', device_id=2, pin=18)
+    relay4 = Output.Relay('LED-1', device_id=3, pin=22)
+    relay5 = Output.Relay('LED-2', device_id=4, pin=5)
+    relay6 = Output.Relay('FAN-1', device_id=5, pin=6)
+    relay7 = Output.Relay('Pump-Add-Water', device_id=6, pin=13)
+    relay8 = Output.Relay('Pump-Cycle', device_id=7, pin=26)
 
-    airtempSensor = Sensor.SHT31("air temp indoor", 0)
-    devices['sensor']['air-temp'].append(airtempSensor)
-    
-    FileManager.SaveObjAsJson("devices.json", devices)
+    devices['relays'] = [relay1, relay2, relay3,
+                         relay4, relay5, relay6, relay7, relay8]
+    devices['sensor']['switchs'] = Sensor.Switch(
+        "Water-LMSW", device_id=0, pin=18)
 
-#do background save sensor data to DB
+    # Create i2c device (ADS1115 and SHT31)
+    try:
+        devices['sensor']['adc'] = Sensor.ADS1115(
+            "ADC", device_id=0)  # i2c pin, default address
+    except ValueError:
+        print("SENSOR ERROR: ADC is not connected.")
+    try:
+        devices['sensor']['sht31'] = Sensor.SHT31("air-indoor", 0)
+    except ValueError:
+        print("SENSOR ERROR: SHT31 is not connected.")
+
+    # Create Analog device if adc is connected
+    if 'adc' in devices['sensor']:
+        devices['sensor']['ph'] = Sensor.PHSensor(
+            "ph", 0, devices['sensor']['adc'], 0)
+        devices['sensor']['water-temp'] = Sensor.TempSensor(
+            "water-temp", 0, devices['sensor']['adc'], 1)
+        devices['sensor']['tds'] = Sensor.TempSensor(
+            "tds", 0, devices['sensor']['adc'], 2)
+
+    saveResult = FileManager.SaveObjAsJson("devices.json", devices)
+    print(f"Save result: {saveResult}")
+
+else:
+    for relay in devices['relays']:
+        relay.Setup()
+
+    if 'adc' in devices['sensor']:
+        devices['sensor']['adc'].Setup()
+    if 'sht31' in devices['sensor']:
+        devices['sensor']['sht31'].Setup()
+    if 'switchs' in devices['sensor']:
+        devices['sensor']['switchs'].Setup()
+
+# do background save sensor data to DB
+
 def Background_DBAutoSave():
-    #Test wirte to database. should removed after Auto-save sensor function is coded
     dbThread = DBManager.SqlLite("Sensor_history")
-    dbThread.CreateDataTable("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
-    dbThread.CreateDataTable("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
-    #test add new record
-    dbThread.Append("Garden_A_Sensor", [25, 50, 6.2, 2.22, 28, 0])
 
-    #init scheduler
+    # init scheduler
     scheduler = sched.scheduler(time.time, time.sleep)
-    devices['sensor']['switchs'][0].PeriodicSaveToDB(1, scheduler, (dbThread,))
-    devices['sensor']['switchs'][1].PeriodicSaveToDB(5, scheduler, (dbThread,))
-    devices['sensor']['switchs'][2].PeriodicSaveToDB(10, scheduler, (dbThread,))
-    #devices['EC sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
-    #devices['PH sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
-    #devices['Light sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
-    #devices['Water level'][0].PeriodicSaveToDB(1, scheduler, (db,))
-    
+    if 'switchs' in devices['sensor']:
+        devices['sensor']['switchs'].AutoSaveToDB(30, scheduler, (dbThread,))
+    if 'sht31' in devices['sensor']:
+        devices['sensor']['sht31'].AutoSaveToDB(30, scheduler, (dbThread,))
+    if 'ph' in devices['sensor']:
+        devices['sensor']['ph'].AutoSaveToDB(30, scheduler, (dbThread,))
+    if 'water-temp' in devices['sensor']:
+        devices['sensor']['water-temp'].AutoSaveToDB(
+            30, scheduler, (dbThread,))
+    if 'tds' in devices['sensor']:
+        devices['sensor']['tds'].AutoSaveToDB(
+            30, scheduler, (dbThread, devices['sensor']['water-temp']))
+
+    for relay in devices['relays']:
+        relay.AutoSaveToDB(30, scheduler, (dbThread,))
+
     scheduler.run()
 
 # Start a thread to run the events
 t1 = threading.Thread(target=Background_DBAutoSave)
+t1.setDaemon(True)
 t1.start()
 
 db = DBManager.SqlLite("Sensor_history")
 
-#init Fastapi
+# init Fastapi
 app = FastAPI()
 
 origins = [
@@ -90,107 +119,157 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins= [f"http://{HOST_HOSTNAME}.local:8080"],
+    allow_origins=[f"http://{HOST_HOSTNAME}.local:8080"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-#Main Fastapi 
+# Main Fastapi
+
+
 @app.get("/")
 async def home():
     return {"Hello": "World"}
+
 
 @app.get("/manager")
 async def device_manager():
     return {"Hello": "ssss"}
 
-#@app.get("/pump/add", )
-#def pumpA_pow(new_pump: Output.Relay):
-#    ## %Todo Add dynamic create new pump
-#    return {"status":"Pump xxx added", "new_pump":new_pump.name}
 
-#Get request
 @app.get("/relay")
 async def get_relays():
-    return{"Relays":devices['output']['relays']}
+    return{"Relays": devices['relays']}
+
 
 @app.get("/relay/{number}")
 async def pump_state(number: int):
     try:
-        return {devices['output']['relays'][number]}
+        return {devices['relays'][number]}
     except IndexError:
-        raise HTTPException(status_code=404, detail="Item not found")
+        return {"status": "Error", "detail": "Device not found."}
+
+
+@app.put("/relay/{number}")
+async def edit_relay(number: int, new_relay: Output.RelayModel):
+    if len(devices['relays']) >= number:
+        new_relay = Output.Relay(new_relay, devices['relays'][number].device_id, devices['relays'][number].pin)
+
+        devices['relays'][number] = new_relay
+        FileManager.SaveObjAsJson("devices.json", devices)
+        return {"status": "ok", "detail": new_relay}
+    else:
+        return {"status": "Error", "detail": f"Relay ID {number} does not exist."}
+
 
 @app.get("/relay/{number}/{power}")
 async def relay_control(number: int, power: bool):
     try:
-        #Pumps code
+        # Pumps code
         if power:
-            devices['output']['relays'][number].ON()
+            devices['relays'][number].ON()
         else:
-            devices['output']['relays'][number].OFF()
-        return {devices['output']['relays'][number].name: power}
+            devices['relays'][number].OFF()
+        return {devices['relays'][number].name: power}
     except IndexError:
-        raise HTTPException(status_code=404, detail="Item not found")
+        return {"status": "Error", "detail": "Device not found."}
 
-@app.get("/switch/{number}")
-async def switch_state(number: int):
+
+@app.get("/switch")
+async def switch_state():
     try:
-        return {"name":devices['sensor']['switchs'][number].name, "value":devices['sensor']['switchs'][number].getState == 0}
+        return {"name": devices['sensor']['switchs'].name, "value": devices['sensor']['switchs'].getState() == 0}
     except IndexError:
-        raise HTTPException(status_code=404, detail="Item not found")
+        return {"status": "Error", "detail": "Device not found."}
+
 
 @app.get("/sensor/temp")
 async def get_temp():
-    temp = devices['sensor']['air-temp'][0].Get_temp()
-    humid = devices['sensor']['air-temp'][0].Get_Humid()
-    #return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
-    return {"temp": temp, "humid": humid}
+    try:
+        temp = devices['sensor']['sht31'].Get_temp()
+        humid = devices['sensor']['sht31'].Get_Humid()
+        return {"temp": temp, "humid": humid}
+    except IndexError:
+        return {"status": "Error", "detail": "Device is not connected."}
 
-@app.get("/sensor/temp/raw")
-async def get_temp_raw():
-    return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
+
+@app.websocket("/sensor/temp")
+async def websocket_get_ph(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        while True:
+            temp = devices['sensor']['sht31'].Get_temp()
+            humid = devices['sensor']['sht31'].Get_Humid()
+            await websocket.send_json({"temp": temp, "humid": humid})
+            await asyncio.sleep(1)
+    except IndexError:
+        await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+
 
 @app.get("/sensor/water_temp")
 async def get_water_temp():
     return {"temp": round(random.uniform(25, 26), 1)}
 
+
 @app.get("/sensor/ph")
 async def get_ph():
-    return {"ph": round(random.uniform(6.0, 7.0), 2)}
+    try:
+        if 'ph' in devices['sensor']:
+            return {"ph": devices['sensor']['ph'].GetPH()}
+        else:
+            return {"ph": round(random.uniform(6.0, 7.0), 2), "Testmode": True}
+    except ValueError as e:
+        return {"status": "Error", "detail": str(e)}
+
+
+@app.websocket("/sensor/ph")
+async def websocket_get_ph(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        if 'ph' in devices['sensor']:
+            while True:
+                await websocket.send_json({"ph": devices['sensor']['ph'].GetPH()})
+                await asyncio.sleep(1)
+        else:
+            while True:
+                await websocket.send_json({"ph": round(random.uniform(6.0, 7.0), 2), "Testmode": True})
+                await asyncio.sleep(1)
+    except ValueError as e:
+        await websocket.send_json({"status": "Error", "detail": str(e)})
+
 
 @app.get("/sensor/ec")
 async def get_ec():
-    return {"ec": round(random.uniform(1.6, 1.9), 2), "unit": "(dS/m)"} #dS/m
+    return {"ec": round(random.uniform(1.6, 1.9), 2), "unit": "(dS/m)"}  # dS/m
+
 
 @app.get("/cam")
 async def get_image():
     live_img = CamHandler.GetImage(180)
     if live_img is None:
-        raise HTTPException(status_code=404, detail="Camera not found")
+        return {"status": "Error", "detail": "Device not found."}
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
+
 
 @app.get("/data")
 async def get_record_tables():
     return db.GetRecords()
 
+
 @app.get("/data/{dataTableName}")
 async def get_records(dataTableName: str):
-    return db.GetRecords(dataTableName)
+    try:
+        return db.GetRecords(dataTableName)
+    except OperationalError as e:
+        return {"status": "Error", "detail": str(e)}
 
-#Post request
-@app.post("/relay")
-async def add_relay(new_relay : Output.Relay = Depends()):
-    #<todo> Add new relay to device list, then save it to json file
-    #check if device-id and pin of new device in not duplicate
-    if not any(saved_relay.device_id == new_relay.device_id for saved_relay in devices['output']['relays'])\
-    and not any(saved_relay.pin == new_relay.pin for saved_relay in devices['output']['relays']):
-      devices['output']['relays'].append(new_relay)
-      FileManager.SaveObjAsJson("devices.json", devices)
-      return {"status": "ok", "new_device": new_relay}
-    else:
-        if any(saved_relay.device_id == new_relay.device_id for saved_relay in devices['output']['relays']):
-          return {"status": "Error. Duplicate device_id, try another"}
-        else:
-          return {"status": "Error. Duplicate GPIO pin, try another"}
+
+# Websocket test
+
+@app.websocket("/ws")
+async def websocket_endpoint(websocket: WebSocket):
+    await websocket.accept()
+    while True:
+        data = await websocket.receive_text()
+        await websocket.send_text(f"Message text was: {data}")
