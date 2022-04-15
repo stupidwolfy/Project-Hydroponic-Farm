@@ -15,14 +15,18 @@ from starlette.responses import StreamingResponse
 from sqlite3 import OperationalError
 import RPi.GPIO as GPIO
 
-from src import DBManager, FileManager
+from src import DBManager, FileManager, API
 
 from src.devices import Output, Sensor, CamHandler
 
 HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 
 devices = FileManager.LoadObjFromJson("devices.json")
+apis = FileManager.LoadObjFromJson("apis.json")
+
 GPIO.cleanup()
+
+
 # create device if no json file
 if devices is None:
     print("Device config file not found, createing...")
@@ -35,7 +39,8 @@ if devices is None:
     relay4 = Output.Relay('LED-1', device_id=3, pin=22, activeLOW=True)
     relay5 = Output.Relay('LED-2', device_id=4, pin=5, activeLOW=True)
     relay6 = Output.Relay('FAN-1', device_id=5, pin=6, activeLOW=True)
-    relay7 = Output.Relay('Pump-Add-Water', device_id=6, pin=13, activeLOW=True)
+    relay7 = Output.Relay('Pump-Add-Water', device_id=6,
+                          pin=13, activeLOW=True)
     relay8 = Output.Relay('Pump-Cycle', device_id=7, pin=26, activeLOW=True)
 
     devices['relays'] = [relay1, relay2, relay3,
@@ -64,7 +69,7 @@ if devices is None:
             "tds", 0, devices['sensor']['adc'], 2)
 
     saveResult = FileManager.SaveObjAsJson("devices.json", devices)
-    print(f"Save result: {saveResult}")
+    print(f"Devices created: {saveResult}")
 
 else:
     for relay in devices['relays']:
@@ -77,7 +82,23 @@ else:
     if 'switchs' in devices['sensor']:
         devices['sensor']['switchs'].Setup()
 
+# create api if no json file
+if apis is None:
+    apis = {}
+    allowedDataName = ["switchs", "temp", "humid", "ph", "water-temp", "tds"]
+    for i in range(8):
+        allowedDataName.append(f"relay-{i}")
+    apis['cloud'] = API.FirebaseHandler(allowedDataName)
+
+    saveResult = FileManager.SaveObjAsJson("apis.json", apis)
+    print(f"Apis created: {saveResult}")
+
+else:
+    if 'cloud' in apis:
+        apis['cloud'].Setup()
+
 # do background save sensor data to DB
+
 
 def Background_DBAutoSave():
     dbThread = DBManager.SqlLite("Sensor_history")
@@ -86,21 +107,36 @@ def Background_DBAutoSave():
     scheduler = sched.scheduler(time.time, time.sleep)
     if 'switchs' in devices['sensor']:
         devices['sensor']['switchs'].AutoSaveToDB(30, scheduler, (dbThread,))
+        apis['cloud'].AutoSendToDB(
+            5, scheduler, ("switchs", devices['sensor']['switchs'].getState()))
     if 'sht31' in devices['sensor']:
         devices['sensor']['sht31'].AutoSaveToDB(30, scheduler, (dbThread,))
+        apis['cloud'].AutoSendToDB(
+            5, scheduler, ("temp", devices['sensor']['sht31'].Get_temp()))
+        apis['cloud'].AutoSendToDB(
+            5, scheduler, ("humid", devices['sensor']['sht31'].Get_Humid()))
     if 'ph' in devices['sensor']:
         devices['sensor']['ph'].AutoSaveToDB(30, scheduler, (dbThread,))
+        apis['cloud'].AutoSendToDB(
+            5, scheduler, ("ph", devices['sensor']['ph'].GetPH()))
     if 'water-temp' in devices['sensor']:
         devices['sensor']['water-temp'].AutoSaveToDB(
             30, scheduler, (dbThread,))
+        apis['cloud'].AutoSendToDB(
+            5, scheduler, ("water-temp", devices['sensor']['water-temp'].GetTemp()))
     if 'tds' in devices['sensor']:
         devices['sensor']['tds'].AutoSaveToDB(
             30, scheduler, (dbThread, devices['sensor']['water-temp']))
+        apis['cloud'].AutoSendToDB(
+            5, scheduler, ("tds", devices['sensor']['tds'].GetPPM()))
 
-    for relay in devices['relays']:
+    for i, relay in enumerate(devices['relays']):
         relay.AutoSaveToDB(30, scheduler, (dbThread,))
+        apis['cloud'].AutoSendToDB(
+            5, scheduler, (f"relay-{i}", relay.getState()))
 
     scheduler.run()
+
 
 # Start a thread to run the events
 t1 = threading.Thread(target=Background_DBAutoSave)
@@ -111,6 +147,8 @@ db = DBManager.SqlLite("Sensor_history")
 
 # init Fastapi
 app = FastAPI()
+
+
 
 origins = [
     "http://pi-zero.local:8080",
@@ -155,7 +193,8 @@ async def pump_state(number: int):
 @app.put("/relay/{number}")
 async def edit_relay(number: int, new_relay: Output.RelayModel):
     if len(devices['relays']) >= number:
-        new_relay = Output.Relay(new_relay, devices['relays'][number].device_id, devices['relays'][number].pin)
+        new_relay = Output.Relay(
+            new_relay, devices['relays'][number].device_id, devices['relays'][number].pin)
 
         devices['relays'][number] = new_relay
         FileManager.SaveObjAsJson("devices.json", devices)
@@ -187,6 +226,7 @@ async def switch_state():
     except KeyError:
         return {"status": "Error", "detail": "Device not setup."}
 
+
 @app.get("/sensor/temp")
 async def get_temp():
     try:
@@ -195,7 +235,7 @@ async def get_temp():
         return {"temp": temp, "humid": humid}
     except IndexError:
         return {"status": "Error", "detail": "Device is not connected."}
-    
+
     except KeyError:
         return {"status": "Error", "detail": "Device is not setup."}
 
@@ -269,6 +309,19 @@ async def get_records(dataTableName: str, limit: int = -1):
         return db.GetRecords(dataTableName, limit)
     except OperationalError as e:
         return {"status": "Error", "detail": str(e)}
+
+
+@app.get("/cloud/setup")
+async def cloud_setup(verified: bool = False):
+    if not verified:
+        requestVerifyData = apis['cloud'].RequestVerifyDevice()
+        return requestVerifyData
+
+    else:
+        verified = apis['cloud'].VerifyDevice()
+        if verified:
+            saveResult = FileManager.SaveObjAsJson("apis.json", apis)
+        return {"result": verified}
 
 
 # Websocket test

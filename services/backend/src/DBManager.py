@@ -30,7 +30,7 @@ class SqlLite(DBManager):
         self.name = name
         #self.con = sqlite3.connect('./DB/' +name+'.db')
 
-    def CreateDataTable(self, tableName, tableHeaders):
+    def CreateDataTable(self, tableName: str, tableHeaders: List[str]):
         tableName = tableName.replace(" ", "_")
         tableName = tableName.replace("-", "_")
         #cur =  self.con.cursor()

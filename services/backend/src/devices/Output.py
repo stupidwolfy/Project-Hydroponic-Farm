@@ -10,12 +10,6 @@ from pydantic import BaseModel
 GPIO.setmode(GPIO.BCM)  # Use GPIOxx number
 
 
-class RelayModel(BaseModel):
-    name: str
-    #device_id: int
-    #pin: int
-    activeLOW: bool
-
 
 class Repeatable:
     # To make some methode run repeatly
@@ -102,3 +96,10 @@ class Relay(Repeatable):
 
     def AutoSaveToDB(self, interval: int, scheduler: sched.scheduler, args: Tuple):
         return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
+
+
+class RelayModel(BaseModel):
+    name: str
+    #device_id: int
+    #pin: int
+    activeLOW: bool

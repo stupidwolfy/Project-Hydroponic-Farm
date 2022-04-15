@@ -4,11 +4,12 @@ import time
 import json
 import base64
 import sched
-from typing import Callable, Tuple
+from typing import Callable, Tuple, List, Optional
 from firebase import Firebase
 
 from src.devices import CamHandler
 from src import Config
+
 
 class Repeatable:
     # To make some methode run repeatly
@@ -62,13 +63,20 @@ class MQTT(Repeatable):
 
 
 class FirebaseHandler(Repeatable):
-    def __init__(self):
-        #<todo> connect to firebase without using email/password directly
+    def __init__(self, allowed_data_name: List[str]= None):
+        # <todo> connect to firebase without using email/password directly
         self.username = ""
         self.config = Config.firebase
         self.device_code = ""
         self.localId = ""
-        #ex.
+        self.isActivated = False
+        if allowed_data_name is None:
+            self.allowed_data_name = ["ph", "ec", "tds",
+                                      "air-temp", "air-humid", "water-temp"]
+            for i in range(8):
+                self.allowed_data_name.append(f"relay-{i}")
+
+        # ex.
         # config = {
         # "apiKey": "apiKey",
         # "authDomain": "projectId.firebaseapp.com",
@@ -80,64 +88,65 @@ class FirebaseHandler(Repeatable):
         self.auth = self.firebase.auth()
         self.db = self.firebase.database()
 
-        #try:
+        # try:
         #    self.user = auth.sign_in_with_email_and_password(email, password)
-        #except HTTPError as e:
+        # except HTTPError as e:
         #    print("Firebase Login failed,please check email/password")
         #    self.user = None
 
     def Setup(self):
-        #Re-setup when load from file
+        # For Re-setup when load from file
         #self.firebase = Firebase(self.config)
         #self.auth = self.firebase.auth()
         self.RefreshToken()
 
     def RequestVerifyDevice(self) -> int:
-        #Verify device by ask user to login and enter device code in web browser
-        Result =  requests.post("https://oauth2.googleapis.com/device/code", data = {"client_id":Config.oAuth2clientID, "scope":Config.scope})
+        # Verify device by ask user to login and enter device code in web browser
+        Result = requests.post("https://oauth2.googleapis.com/device/code",
+                               data={"client_id": Config.oAuth2clientID, "scope": Config.scope})
         if Result.status_code == 200:
             deviceVerificationResult = Result.json()
-            #self.user_code = deviceVerificationResult["user_code"] #Code to let user enter on web browser 
-            #self.verification_url = deviceVerificationResult["verification_url"] #url for user to login and enter Code
+            # self.user_code = deviceVerificationResult["user_code"] #Code to let user enter on web browser
+            # self.verification_url = deviceVerificationResult["verification_url"] #url for user to login and enter Code
             self.device_code = deviceVerificationResult["device_code"]
 
-            return {"user_code":deviceVerificationResult["user_code"], "verification_url": deviceVerificationResult["verification_url"]}
+            return {"user_code": deviceVerificationResult["user_code"], "verification_url": deviceVerificationResult["verification_url"]}
         else:
-            return {"error": aa.status_code}
+            return {"error": Result.status_code}
 
-    def Login(self) -> bool():
-        #After user finish login / enter code on browser
-        #Exchange device code to get id token
-        Result = requests.post("https://oauth2.googleapis.com/token", data= {"client_id":Config.oAuth2clientID, "client_secret":Config.oAuth2clientSecret, "code":self.device_code, "grant_type": "http://oauth.net/grant_type/device/1.0"})
+    def VerifyDevice(self) -> bool():
+        # After user finish login / enter code on browser
+        # Exchange device code to get id token
+        Result = requests.post("https://oauth2.googleapis.com/token", data={
+                               "client_id": Config.oAuth2clientID, "client_secret": Config.oAuth2clientSecret, "code": self.device_code, "grant_type": "http://oauth.net/grant_type/device/1.0"})
         if Result.status_code == 200:
             getUserIDTokenResult = Result.json()
             #self.id_token = getUserIDTokenResult["id_token"]
-            Result = requests.post(f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key={Config.firebase['apiKey']}", data = {"postBody":f"id_token={getUserIDTokenResult['id_token']}&providerId=google.com", "requestUri": "http://localhost", "returnIdpCredential": True, "returnSecureToken": True})
+            Result = requests.post(f"https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp?key={Config.firebase['apiKey']}", data={
+                                   "postBody": f"id_token={getUserIDTokenResult['id_token']}&providerId=google.com", "requestUri": "http://localhost", "returnIdpCredential": True, "returnSecureToken": True})
             if Result.status_code == 200:
                 LoginResult = Result.json()
                 self.user = self.auth.refresh(LoginResult['refreshToken'])
                 self.localId = LoginResult['localId']
+                self.isActivated = True
                 return True
 
         return False
 
     def RefreshToken(self):
-        self.user = self.auth.refresh(self.user['refreshToken'])
+        if self.isActivated:
+            self.user = self.auth.refresh(self.user['refreshToken'])
 
     def AutoRefreshToken(self):
         return super().PeriodicTask(self.RefreshToken, 30, scheduler, args)
 
-    def SendtoDB(self, data_name:str, data):
-        allowed_data_name = ["ph", "ec", "tds", "air-temp", "air-humid", "water-temp"]
-        for i in range(7):
-            allowed_data_name.append(f"relay-{i}")
-        
-        if data_name in allowed_data_name:
-            results = self.db.child(f"users/{self.localId}/device").update({data_name: data}, self.user['idToken'])
-        else:
-            print(f"FirebaseDB ERROR: Not allow data_name: {data_name}")
+    def SendtoDB(self, data_name: str, data):
+        if self.isActivated:
+            if data_name in self.allowed_data_name:
+                results = self.db.child(
+                    f"users/{self.localId}/device").update({data_name: data}, self.user['idToken'])
+            else:
+                print(f"FirebaseDB ERROR: Not allow data_name: {data_name}")
 
     def AutoSendToDB(self, interval: int, scheduler: sched.scheduler, args: Tuple):
         return super().PeriodicTask(self.SendtoDB, interval, scheduler, args)
-
-
