@@ -63,18 +63,21 @@ class MQTT(Repeatable):
 
 
 class FirebaseHandler(Repeatable):
-    def __init__(self, allowed_data_name: List[str]= None):
+    def __init__(self, allowed_data_name: Optional[List[str]]):
         # <todo> connect to firebase without using email/password directly
         self.username = ""
         self.config = Config.firebase
         self.device_code = ""
         self.localId = ""
         self.isActivated = False
+        
         if allowed_data_name is None:
             self.allowed_data_name = ["ph", "ec", "tds",
                                       "air-temp", "air-humid", "water-temp"]
             for i in range(8):
                 self.allowed_data_name.append(f"relay-{i}")
+        else:
+            self.allowed_data_name = allowed_data_name
 
         # ex.
         # config = {
@@ -100,7 +103,7 @@ class FirebaseHandler(Repeatable):
         #self.auth = self.firebase.auth()
         self.RefreshToken()
 
-    def RequestVerifyDevice(self) -> int:
+    def RequestVerifyDevice(self):
         # Verify device by ask user to login and enter device code in web browser
         Result = requests.post("https://oauth2.googleapis.com/device/code",
                                data={"client_id": Config.oAuth2clientID, "scope": Config.scope})
@@ -137,8 +140,8 @@ class FirebaseHandler(Repeatable):
         if self.isActivated:
             self.user = self.auth.refresh(self.user['refreshToken'])
 
-    def AutoRefreshToken(self):
-        return super().PeriodicTask(self.RefreshToken, 30, scheduler, args)
+    def AutoRefreshToken(self, interval: int, scheduler: sched.scheduler):
+        return super().PeriodicTask(self.RefreshToken, interval, scheduler, ())
 
     def SendtoDB(self, data_name: str, data):
         if self.isActivated:

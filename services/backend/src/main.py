@@ -93,18 +93,18 @@ if apis is None:
     saveResult = FileManager.SaveObjAsJson("apis.json", apis)
     print(f"Apis created: {saveResult}")
 
-else:
-    if 'cloud' in apis:
-        apis['cloud'].Setup()
-
 # do background save sensor data to DB
+dbThread = DBManager.SqlLite("Sensor_history")
+scheduler = sched.scheduler(time.time, time.sleep)
 
 
 def Background_DBAutoSave():
-    dbThread = DBManager.SqlLite("Sensor_history")
+    #dbThread = DBManager.SqlLite("Sensor_history")
 
     # init scheduler
-    scheduler = sched.scheduler(time.time, time.sleep)
+    #scheduler = sched.scheduler(time.time, time.sleep)
+    apis['cloud'].AutoRefreshToken(120, scheduler)
+
     if 'switchs' in devices['sensor']:
         devices['sensor']['switchs'].AutoSaveToDB(30, scheduler, (dbThread,))
         apis['cloud'].AutoSendToDB(
@@ -135,11 +135,12 @@ def Background_DBAutoSave():
         apis['cloud'].AutoSendToDB(
             5, scheduler, (f"relay-{i}", relay.getState()))
 
-    scheduler.run()
+    # scheduler.run()
 
 
 # Start a thread to run the events
-t1 = threading.Thread(target=Background_DBAutoSave)
+Background_DBAutoSave()
+t1 = threading.Thread(target=scheduler.run)
 t1.setDaemon(True)
 t1.start()
 
@@ -147,7 +148,6 @@ db = DBManager.SqlLite("Sensor_history")
 
 # init Fastapi
 app = FastAPI()
-
 
 
 origins = [
@@ -312,7 +312,7 @@ async def get_records(dataTableName: str, limit: int = -1):
 
 
 @app.get("/cloud/setup")
-async def cloud_setup(verified: bool = False):
+async def cloud_setup(verified: bool = None) -> dict:
     if not verified:
         requestVerifyData = apis['cloud'].RequestVerifyDevice()
         return requestVerifyData
@@ -325,6 +325,7 @@ async def cloud_setup(verified: bool = False):
 
 
 # Websocket test
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
