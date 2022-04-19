@@ -26,12 +26,13 @@ class Relay(Repeatable):
         # GPIO.setup(self.pin, GPIO.OUT)
         # return self.name, self.device_id, self.pin, self.activeLOW
 
-    def __init__(self, name: str, device_id: int, pin: int, activeLOW=False):
+    def __init__(self, name: str, device_id: int, pin: int, activeLOW=False, autoSaveInterval = 30):
         self.name = name
         self.pin = pin
         self.activeLOW = activeLOW
         self.device_id = device_id
         self.isOn = False
+        self.autoSaveInterval = autoSaveInterval
 
         GPIO.setup(self.pin, GPIO.OUT)
         if (self.activeLOW is True):
@@ -94,8 +95,8 @@ class Relay(Repeatable):
         db.CreateDataTable(self.name, ["data"])
         db.Append(self.name, [self.data])
 
-    def AutoSaveToDB(self, interval: int, scheduler: sched.scheduler, args: Tuple):
-        return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
+    def AutoSaveToDB(self, scheduler: sched.scheduler, args: Tuple):
+        return super().PeriodicTask(self.SaveToDB, self.autoSaveInterval, scheduler, args)
 
 
 class RelayModel(BaseModel):

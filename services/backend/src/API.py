@@ -63,14 +63,16 @@ class MQTT(Repeatable):
 
 
 class FirebaseHandler(Repeatable):
-    def __init__(self, allowed_data_name: Optional[List[str]]):
+    def __init__(self, allowed_data_name: Optional[List[str]], sendToDBInterval=5, updateTokenInterval=120):
         # <todo> connect to firebase without using email/password directly
         self.username = ""
         self.config = Config.firebase
         self.device_code = ""
         self.localId = ""
         self.isActivated = False
-        
+        self.sendToDBInterval = sendToDBInterval
+        self.updateTokenInterval = updateTokenInterval
+
         if allowed_data_name is None:
             self.allowed_data_name = ["ph", "ec", "tds",
                                       "air-temp", "air-humid", "water-temp"]
@@ -101,13 +103,15 @@ class FirebaseHandler(Repeatable):
         # For Re-setup when load from file
         #self.firebase = Firebase(self.config)
         #self.auth = self.firebase.auth()
-        self.RefreshToken()
+        if self.isActivated:
+            self.RefreshToken()
 
     def RequestVerifyDevice(self):
         # Verify device by ask user to login and enter device code in web browser
         Result = requests.post("https://oauth2.googleapis.com/device/code",
                                data={"client_id": Config.oAuth2clientID, "scope": Config.scope})
         if Result.status_code == 200:
+            self.isActivated = False
             deviceVerificationResult = Result.json()
             # self.user_code = deviceVerificationResult["user_code"] #Code to let user enter on web browser
             # self.verification_url = deviceVerificationResult["verification_url"] #url for user to login and enter Code
@@ -140,16 +144,18 @@ class FirebaseHandler(Repeatable):
         if self.isActivated:
             self.user = self.auth.refresh(self.user['refreshToken'])
 
-    def AutoRefreshToken(self, interval: int, scheduler: sched.scheduler):
-        return super().PeriodicTask(self.RefreshToken, interval, scheduler, ())
+    def AutoRefreshToken(self, scheduler: sched.scheduler):
+        return super().PeriodicTask(self.RefreshToken, self.updateTokenInterval, scheduler, ())
 
     def SendtoDB(self, data_name: str, data):
-        if self.isActivated:
-            if data_name in self.allowed_data_name:
-                results = self.db.child(
-                    f"users/{self.localId}/device").update({data_name: data}, self.user['idToken'])
-            else:
-                print(f"FirebaseDB ERROR: Not allow data_name: {data_name}")
+        if data is not None:
+            if self.isActivated:
+                if data_name in self.allowed_data_name:
+                    results = self.db.child(
+                        f"users/{self.localId}/device").update({data_name: data}, self.user['idToken'])
+                else:
+                    print(
+                        f"FirebaseDB ERROR: Not allow data_name: {data_name}")
 
-    def AutoSendToDB(self, interval: int, scheduler: sched.scheduler, args: Tuple):
-        return super().PeriodicTask(self.SendtoDB, interval, scheduler, args)
+    def AutoSendToDB(self, scheduler: sched.scheduler, args: Tuple):
+        return super().PeriodicTask(self.SendtoDB, self.sendToDBInterval, scheduler, args)

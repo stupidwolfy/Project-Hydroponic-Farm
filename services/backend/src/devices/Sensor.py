@@ -40,35 +40,42 @@ class ADS1115(Sensor):
     def __init__(self, name: str, device_id: int, gain=2/3, address=0x48):
         super().__init__(name, device_id)
         self.address = address
-        self.gain=gain
-        self.adc = ADS.ADS1115(i2c, gain=self.gain, address=self.address)
-        self.chan = [AnalogIn(self.adc, ADS.P0), AnalogIn(
-            self.adc, ADS.P1), AnalogIn(self.adc, ADS.P2), AnalogIn(self.adc, ADS.P3)]
+        self.gain = gain
+        self.isActivated = False
+
+        self.Setup()
 
     def Setup(self):
-        #Re setup adc, to make sure correct gain is used
-        self.adc = ADS.ADS1115(i2c, gain=self.gain, address=self.address)
-        self.chan = [AnalogIn(self.adc, ADS.P0), AnalogIn(
-            self.adc, ADS.P1), AnalogIn(self.adc, ADS.P2), AnalogIn(self.adc, ADS.P3)]
-        pass
+        # Re setup adc, to make sure correct gain is used
+        try:
+            self.adc = ADS.ADS1115(i2c, gain=self.gain, address=self.address)
+            self.chan = [AnalogIn(self.adc, ADS.P0), AnalogIn(
+                self.adc, ADS.P1), AnalogIn(self.adc, ADS.P2), AnalogIn(self.adc, ADS.P3)]
+            self.isActivated = True
+        except ValueError:
+            self.isActivated = False
 
     def getVoltage(self, pointer: int):
-        return self.chan[pointer].voltage
+        if self.isActivated:
+            return self.chan[pointer].voltage
 
     def getVoltags(self):
-        voltages = []
-        for i in range(4):
-            voltages[i] = self.chan[i].voltage
-        return voltages
+        if self.isActivated:
+            voltages = []
+            for i in range(4):
+                voltages[i] = self.chan[i].voltage
+            return voltages
 
     def getValue(self, pointer: int):
-        return self.chan[pointer].value
+        if self.isActivated:
+            return self.chan[pointer].value
 
     def getValues(self):
-        values = []
-        for i in range(4):
-            values[i] = self.chan[i].value
-        return values
+        if self.isActivated:
+            values = []
+            for i in range(4):
+                values[i] = self.chan[i].value
+            return values
 
 
 class AnalogSensor(Sensor):
@@ -87,10 +94,11 @@ class Switch(Sensor, Repeatable):
         return self.name, self.device_id, self.pin, self.pullUpDown
 
     # pullUpDown: True --> pullup | False --> pulldown | null --> not pull up/down):
-    def __init__(self, name: str, device_id: int, pin: int, pullUpDown: bool = None):
+    def __init__(self, name: str, device_id: int, pin: int, pullUpDown: bool = None, autoSaveInterval=30):
         super().__init__(name, device_id)
         self.pin = pin
         self.pullUpDown = pullUpDown
+        self.autoSaveInterval = autoSaveInterval
 
         # do optional pull up / pull down
         if (self.pullUpDown is None):
@@ -113,15 +121,11 @@ class Switch(Sensor, Repeatable):
         db.CreateDataTable(self.name, ["data"])
         db.Append(self.name, [self.data])
 
-    def AutoSaveToDB(self, interval: int, scheduler: sched.scheduler, args: Tuple):
-        return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
+    def AutoSaveToDB(self, scheduler: sched.scheduler, args: Tuple):
+        return super().PeriodicTask(self.SaveToDB, self.autoSaveInterval, scheduler, args)
 
     def getState(self):
-        if (True):  # Testmode
-            gpioStates = [GPIO.HIGH, GPIO.LOW]
-            return random.choice(gpioStates)
-        else:
-            return GPIO.input(self.pin)
+        return GPIO.input(self.pin)
 
 
 class WaterLevel(Sensor, Repeatable):
@@ -129,7 +133,7 @@ class WaterLevel(Sensor, Repeatable):
     def __getinitargs__(self):
         return self.name, self.device_id, self.pinTrig, self.pinEcho, self.long, self.width
 
-    def __init__(self, name: str, device_id: int, pinTrig: int, pinEcho: int, long: int, width: int):
+    def __init__(self, name: str, device_id: int, pinTrig: int, pinEcho: int, long: int, width: int, autoSaveInterval=30):
         super().__init__(name, device_id)
         self.long = long
         self.width = width
@@ -138,6 +142,7 @@ class WaterLevel(Sensor, Repeatable):
         self.emptyDistance = None
         self.fullDistance = None
         self.currentDistance = None
+        self.autoSaveInterval = autoSaveInterval
 
         GPIO.setup(self.pinTrig, GPIO.OUT)
         GPIO.setup(self.pinEcho, GPIO.IN)
@@ -195,53 +200,68 @@ class WaterLevel(Sensor, Repeatable):
         db.CreateDataTable(self.name, ["data"])
         db.Append(self.name, [self.GetWaterLeft()])
 
-    def AutoSaveToDB(self, interval: int, scheduler: sched.scheduler, args: Tuple):
-        return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
+    def AutoSaveToDB(self, scheduler: sched.scheduler, args: Tuple):
+        return super().PeriodicTask(self.SaveToDB, self.autoSaveInterval, scheduler, args)
 
 
 class SHT31(Sensor, Repeatable):
-    def __init__(self, name: str, device_id: int, address=0x44):
+    def __init__(self, name: str, device_id: int, address=0x44, autoSaveInterval=30):
         super().__init__(name, device_id)
         self.address = address
-        self.sensor = adafruit_sht31d.SHT31D(i2c, address=self.address)
+        self.autoSaveInterval = autoSaveInterval
+        self.isActivated = False
+
+        self.Setup()
 
     def Setup(self):
-        self.sensor = adafruit_sht31d.SHT31D(i2c, address=self.address)
+        try:
+            self.sensor = adafruit_sht31d.SHT31D(i2c, address=self.address)
+            self.isActivated = True
+        except ValueError:
+            self.isActivated = False
 
     def Get_temp(self):
-        return round(self.sensor.temperature, 2)
+        if self.isActivated:
+            return round(self.sensor.temperature, 2)
 
     def Get_Humid(self):
-        return round(self.sensor.relative_humidity, 2)
+        if self.isActivated:
+            return round(self.sensor.relative_humidity, 2)
 
     def SaveToDB(self, db: DBManager.DBManager):
-        db.CreateDataTable(self.name+"-temperature", ["data"])
-        db.CreateDataTable(self.name+"-humidity", ["data"])
-        db.Append(self.name+"-temperature", [self.Get_temp()])
-        db.Append(self.name+"-humidity", [self.Get_Humid()])
+        if self.isActivated:
+            db.CreateDataTable(self.name+"-temperature", ["data"])
+            db.CreateDataTable(self.name+"-humidity", ["data"])
+            db.Append(self.name+"-temperature", [self.Get_temp()])
+            db.Append(self.name+"-humidity", [self.Get_Humid()])
 
-    def AutoSaveToDB(self, interval: int, scheduler: sched.scheduler, args: Tuple):
-        return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
+    def AutoSaveToDB(self, scheduler: sched.scheduler, args: Tuple):
+        return super().PeriodicTask(self.SaveToDB, self.autoSaveInterval, scheduler, args)
 
 
 class TempSensor(AnalogSensor, Repeatable):
-    def __init__(self, name: str, device_id: int, ADCDevice: ADS1115, ADCChannel: int, multiplier: float = 10):
+    def __init__(self, name: str, device_id: int, ADCDevice: ADS1115, ADCChannel: int, multiplier: float = 10, autoSaveInterval=30):
         super().__init__(name, device_id, ADCDevice, ADCChannel)
         self.multiplier = multiplier
+        self.autoSaveInterval = autoSaveInterval
 
     # Get raw Voltage, for calibation
     def getVoltage(self):
         return self.ADCDevice.getVoltage(self.ADCChannel)
 
     def GetTemp(self):
-        return self.getVoltage()*self.multiplier
+        voltage = self.getVoltage()
+        if voltage is not None:
+            return voltage*self.multiplier
 
     def SaveToDB(self, db: DBManager.DBManager):
-        db.CreateDataTable(self.name, ["data"])
-        db.Append(self.name, [self.GetTemp()])
+        temp = self.GetTemp()
+        if temp is not None:
+            db.CreateDataTable(self.name, ["data"])
+            db.Append(self.name, [temp])
 
-    def AutoSaveToDB(self, interval: int, scheduler: sched.scheduler, args: Tuple):
-        return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
+    def AutoSaveToDB(self, scheduler: sched.scheduler, args: Tuple):
+        return super().PeriodicTask(self.SaveToDB, self.autoSaveInterval, scheduler, args)
 
 
 class PHSensor(AnalogSensor, Repeatable):
@@ -257,10 +277,11 @@ class PHSensor(AnalogSensor, Repeatable):
        m = (4-7)/(0.615-0.455) = -18.75
     """
 
-    def __init__(self, name: str, device_id: int, ADCDevice: ADS1115, ADCChannel: int, m: float = None, b: float = None):
+    def __init__(self, name: str, device_id: int, ADCDevice: ADS1115, ADCChannel: int, m: float = -1, b: float = -1, autoSaveInterval=30):
         super().__init__(name, device_id, ADCDevice, ADCChannel)
         self.m = m
         self.b = b
+        self.autoSaveInterval = autoSaveInterval
 
     def Setm(self, m):
         self.m = m
@@ -274,42 +295,54 @@ class PHSensor(AnalogSensor, Repeatable):
 
     # Get current PH, Must calibate first!
     def GetPH(self):
-        if self.m is None | self.b is None:
+        if self.m < 0 | self.b < 0:
             raise ValueError("m and/or b equation varible is not set yet.")
-        x = self.ADCDevice.getVoltage(self.ADCChannel) / 5.00
-        y = (self.m * x) + self.b
-        return y
+
+        voltage = self.ADCDevice.getVoltage(self.ADCChannel)
+        if voltage is not None:
+            x = voltage / 5.00
+            y = (self.m * x) + self.b
+            return y
 
     def SaveToDB(self, db: DBManager.DBManager):
-        if self.m is not None and self.b is not None:
-            db.CreateDataTable(self.name, ["data"])
-            db.Append(self.name, [self.GetPH()])
+        if self.m > 0 and self.b > 0:
+            ph = self.GetPH()
+            if ph is not None:
+                db.CreateDataTable(self.name, ["data"])
+                db.Append(self.name, [ph])
 
-    def AutoSaveToDB(self, interval: int, scheduler: sched.scheduler, args: Tuple):
-        return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
+    def AutoSaveToDB(self, scheduler: sched.scheduler, args: Tuple):
+        return super().PeriodicTask(self.SaveToDB, self.autoSaveInterval, scheduler, args)
 
 
 class TDSSensor(AnalogSensor, Repeatable):
-    def __init__(self, name: str, device_id: int, ADCDevice: ADS1115, ADCChannel: int):
+    def __init__(self, name: str, device_id: int, ADCDevice: ADS1115, ADCChannel: int, autoSaveInterval=30):
         super().__init__(name, device_id, ADCDevice, ADCChannel)
+        self.autoSaveInterval = autoSaveInterval
 
     # Get raw Voltage, for calibation
     def getVoltage(self):
         return self.ADCDevice.getVoltage(self.ADCChannel)
 
     def GetPPM(self, waterTemp: float):
-        compensationCoefficient = 1.0+0.02*(waterTemp-25.0)
-        compensationVolatge = self.getVoltage() / compensationCoefficient
-        tdsValue = (133.42*math.pow(compensationVolatge, 3) - 255.86*math.pow(compensationVolatge, 2)
-                    + 857.39*compensationVolatge)*0.5
-        return tdsValue
+        voltage = self.getVoltage()
+        if voltage is not None:
+            compensationCoefficient = 1.0+0.02*(waterTemp-25.0)
+            compensationVolatge = voltage / compensationCoefficient
+            tdsValue = (133.42*math.pow(compensationVolatge, 3) - 255.86*math.pow(compensationVolatge, 2)
+                        + 857.39*compensationVolatge)*0.5
+            return tdsValue
 
     def SaveToDB(self, db: DBManager.DBManager, tempSensor: TempSensor):
-        db.CreateDataTable(self.name, ["data"])
-        db.Append(self.name, [self.GetPPM(tempSensor.GetTemp())])
+        temp = tempSensor.GetTemp()
+        if temp is not None:
+            ppm = self.GetPPM(tempSensor.GetTemp())
+            if ppm is not None:
+                db.CreateDataTable(self.name, ["data"])
+                db.Append(self.name, [ppm])
 
-    def AutoSaveToDB(self, interval: int, scheduler: sched.scheduler, args: Tuple):
-        return super().PeriodicTask(self.SaveToDB, interval, scheduler, args)
+    def AutoSaveToDB(self, scheduler: sched.scheduler, args: Tuple):
+        return super().PeriodicTask(self.SaveToDB, self.autoSaveInterval, scheduler, args)
 
 # Model class
 

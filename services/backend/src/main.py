@@ -49,15 +49,10 @@ if devices is None:
         "Water-LMSW", device_id=0, pin=18)
 
     # Create i2c device (ADS1115 and SHT31)
-    try:
-        devices['sensor']['adc'] = Sensor.ADS1115(
-            "ADC", device_id=0)  # i2c pin, default address
-    except ValueError:
-        print("SENSOR ERROR: ADC is not connected.")
-    try:
-        devices['sensor']['sht31'] = Sensor.SHT31("air-indoor", 0)
-    except ValueError:
-        print("SENSOR ERROR: SHT31 is not connected.")
+    devices['sensor']['adc'] = Sensor.ADS1115(
+        "ADC", device_id=0)  # i2c pin, default address
+
+    devices['sensor']['sht31'] = Sensor.SHT31("air-indoor", 0)
 
     # Create Analog device if adc is connected
     if 'adc' in devices['sensor']:
@@ -65,7 +60,7 @@ if devices is None:
             "ph", 0, devices['sensor']['adc'], 0)
         devices['sensor']['water-temp'] = Sensor.TempSensor(
             "water-temp", 0, devices['sensor']['adc'], 1)
-        devices['sensor']['tds'] = Sensor.TempSensor(
+        devices['sensor']['tds'] = Sensor.TDSSensor(
             "tds", 0, devices['sensor']['adc'], 2)
 
     saveResult = FileManager.SaveObjAsJson("devices.json", devices)
@@ -82,6 +77,8 @@ else:
     if 'switchs' in devices['sensor']:
         devices['sensor']['switchs'].Setup()
 
+    print(f"Devices loaded")
+
 # create api if no json file
 if apis is None:
     apis = {}
@@ -93,6 +90,10 @@ if apis is None:
     saveResult = FileManager.SaveObjAsJson("apis.json", apis)
     print(f"Apis created: {saveResult}")
 
+else:
+    apis['cloud'].Setup()
+    print(f"Apis loaded")
+
 # do background save sensor data to DB
 dbThread = DBManager.SqlLite("Sensor_history")
 scheduler = sched.scheduler(time.time, time.sleep)
@@ -103,37 +104,35 @@ def Background_DBAutoSave():
 
     # init scheduler
     #scheduler = sched.scheduler(time.time, time.sleep)
-    apis['cloud'].AutoRefreshToken(120, scheduler)
+    apis['cloud'].AutoRefreshToken(scheduler)
 
     if 'switchs' in devices['sensor']:
-        devices['sensor']['switchs'].AutoSaveToDB(30, scheduler, (dbThread,))
+        devices['sensor']['switchs'].AutoSaveToDB(scheduler, (dbThread,))
         apis['cloud'].AutoSendToDB(
-            5, scheduler, ("switchs", devices['sensor']['switchs'].getState()))
+            scheduler, ("switchs", devices['sensor']['switchs'].getState()))
     if 'sht31' in devices['sensor']:
-        devices['sensor']['sht31'].AutoSaveToDB(30, scheduler, (dbThread,))
+        devices['sensor']['sht31'].AutoSaveToDB(scheduler, (dbThread,))
         apis['cloud'].AutoSendToDB(
-            5, scheduler, ("temp", devices['sensor']['sht31'].Get_temp()))
+            scheduler, ("temp", devices['sensor']['sht31'].Get_temp()))
         apis['cloud'].AutoSendToDB(
-            5, scheduler, ("humid", devices['sensor']['sht31'].Get_Humid()))
+            scheduler, ("humid", devices['sensor']['sht31'].Get_Humid()))
     if 'ph' in devices['sensor']:
-        devices['sensor']['ph'].AutoSaveToDB(30, scheduler, (dbThread,))
+        devices['sensor']['ph'].AutoSaveToDB(scheduler, (dbThread,))
         apis['cloud'].AutoSendToDB(
-            5, scheduler, ("ph", devices['sensor']['ph'].GetPH()))
+            scheduler, ("ph", devices['sensor']['ph'].GetPH()))
     if 'water-temp' in devices['sensor']:
-        devices['sensor']['water-temp'].AutoSaveToDB(
-            30, scheduler, (dbThread,))
+        devices['sensor']['water-temp'].AutoSaveToDB(scheduler, (dbThread,))
         apis['cloud'].AutoSendToDB(
-            5, scheduler, ("water-temp", devices['sensor']['water-temp'].GetTemp()))
+            scheduler, ("water-temp", devices['sensor']['water-temp'].GetTemp()))
     if 'tds' in devices['sensor']:
         devices['sensor']['tds'].AutoSaveToDB(
-            30, scheduler, (dbThread, devices['sensor']['water-temp']))
+            scheduler, (dbThread, devices['sensor']['water-temp']))
         apis['cloud'].AutoSendToDB(
-            5, scheduler, ("tds", devices['sensor']['tds'].GetPPM()))
+            scheduler, ("tds", devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp())))
 
     for i, relay in enumerate(devices['relays']):
-        relay.AutoSaveToDB(30, scheduler, (dbThread,))
-        apis['cloud'].AutoSendToDB(
-            5, scheduler, (f"relay-{i}", relay.getState()))
+        relay.AutoSaveToDB(scheduler, (dbThread,))
+        apis['cloud'].AutoSendToDB(scheduler, (f"relay-{i}", relay.getState()))
 
     # scheduler.run()
 
@@ -172,9 +171,9 @@ async def home():
     return {"Hello": "World"}
 
 
-@app.get("/manager")
-async def device_manager():
-    return {"Hello": "ssss"}
+# @app.get("/manager")
+# async def device_manager():
+#     return {"Hello": "ssss"}
 
 
 @app.get("/relay")
@@ -240,54 +239,20 @@ async def get_temp():
         return {"status": "Error", "detail": "Device is not setup."}
 
 
-@app.websocket("/sensor/temp")
-async def websocket_get_ph(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        while True:
-            temp = devices['sensor']['sht31'].Get_temp()
-            humid = devices['sensor']['sht31'].Get_Humid()
-            await websocket.send_json({"temp": temp, "humid": humid})
-            await asyncio.sleep(1)
-    except IndexError:
-        await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
-
-
 @app.get("/sensor/water_temp")
 async def get_water_temp():
-    return {"temp": round(random.uniform(25, 26), 1)}
+    return {"water_temp": devices['sensor']['water-temp'].GetTemp()}
 
 
 @app.get("/sensor/ph")
 async def get_ph():
-    try:
-        if 'ph' in devices['sensor']:
-            return {"ph": devices['sensor']['ph'].GetPH()}
-        else:
-            return {"ph": round(random.uniform(6.0, 7.0), 2), "Testmode": True}
-    except ValueError as e:
-        return {"status": "Error", "detail": str(e)}
+    return {"ph": devices['sensor']['ph'].GetPH()}
 
 
-@app.websocket("/sensor/ph")
-async def websocket_get_ph(websocket: WebSocket):
-    await websocket.accept()
-    try:
-        if 'ph' in devices['sensor']:
-            while True:
-                await websocket.send_json({"ph": devices['sensor']['ph'].GetPH()})
-                await asyncio.sleep(1)
-        else:
-            while True:
-                await websocket.send_json({"ph": round(random.uniform(6.0, 7.0), 2), "Testmode": True})
-                await asyncio.sleep(1)
-    except ValueError as e:
-        await websocket.send_json({"status": "Error", "detail": str(e)})
-
-
-@app.get("/sensor/ec")
-async def get_ec():
-    return {"ec": round(random.uniform(1.6, 1.9), 2), "unit": "(dS/m)"}  # dS/m
+@app.get("/sensor/tds")
+async def get_tds():
+    # dS/m
+    return {"tds": devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp()), "unit": "(dS/m)"}
 
 
 @app.get("/cam")
@@ -311,6 +276,11 @@ async def get_records(dataTableName: str, limit: int = -1):
         return {"status": "Error", "detail": str(e)}
 
 
+@app.get("/cloud/status")
+async def cloud_status():
+    return {"verified": apis['cloud'].isActivated}
+
+
 @app.get("/cloud/setup")
 async def cloud_setup(verified: bool = None) -> dict:
     if not verified:
@@ -318,11 +288,10 @@ async def cloud_setup(verified: bool = None) -> dict:
         return requestVerifyData
 
     else:
-        verified = apis['cloud'].VerifyDevice()
-        if verified:
+        verifCompleated = apis['cloud'].VerifyDevice()
+        if verifyCompleated:
             saveResult = FileManager.SaveObjAsJson("apis.json", apis)
         return {"result": verified}
-
 
 # Websocket test
 
@@ -330,6 +299,27 @@ async def cloud_setup(verified: bool = None) -> dict:
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
-    while True:
-        data = await websocket.receive_text()
-        await websocket.send_text(f"Message text was: {data}")
+    data = await websocket.receive_text()
+    if data is "temp":
+        try:
+            while True:
+                await websocket.send_json({"temp": devices['sensor']['sht31'].Get_temp()})
+                await asyncio.sleep(5)
+        except IndexError:
+            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+
+    elif data is "humid":
+        try:
+            while True:
+                await websocket.send_json({"humid": devices['sensor']['sht31'].Get_Humid()})
+                await asyncio.sleep(5)
+        except IndexError:
+            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+
+    elif data is "ph":
+        try:
+            while True:
+                await websocket.send_json({"ph": devices['sensor']['ph'].GetPH()})
+                await asyncio.sleep(5)
+        except IndexError:
+            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
