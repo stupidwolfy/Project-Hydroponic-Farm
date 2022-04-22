@@ -282,6 +282,11 @@ class PHSensor(AnalogSensor, Repeatable):
         self.m = m
         self.b = b
         self.autoSaveInterval = autoSaveInterval
+        self.calibrationV = []
+        self.calibrationPH = []
+        #y = mx + b
+        #y is ph
+        #x is voltage
 
     def Setm(self, m):
         self.m = m
@@ -293,16 +298,37 @@ class PHSensor(AnalogSensor, Repeatable):
     def getVoltage(self):
         return self.ADCDevice.getVoltage(self.ADCChannel)
 
+    def AddCalibratePoint(self, refPH):
+        if len(self.calibrationPH) < 2:
+            self.calibrationV.append(self.getVoltage())
+            self.calibrationPH.append(refPH)
+            if len(self.calibrationPH) == 2:
+                self.m = (self.calibrationPH[1] - self.calibrationPH[0]) / (self.calibrationV[1] - self.calibrationV[0])
+                self.b = ((self.calibrationPH[0] + self.calibrationPH[1]) - (self.m * (self.calibrationV[0] + self.calibrationV[1])))/2
+            return True
+        else:
+            return False
+
+    def ResetCalibratePoint(self):
+        self.calibrationV = []
+        self.calibrationPH = []
+        self.m = -1
+        self.b = -1
+
     # Get current PH, Must calibate first!
     def GetPH(self):
-        if self.m < 0 | self.b < 0:
-            raise ValueError("m and/or b equation varible is not set yet.")
-
-        voltage = self.ADCDevice.getVoltage(self.ADCChannel)
-        if voltage is not None:
-            x = voltage / 5.00
-            y = (self.m * x) + self.b
-            return y
+        if len(self.calibrationPH) < 2:
+            return -1
+        
+        rawPH = []
+        for i in range(10):
+            voltage = self.ADCDevice.getVoltage(self.ADCChannel)
+            if voltage is not None:
+              #x = voltage / 5.00
+              x = voltage
+              y = (self.m * x) + self.b
+              rawPH.append(y)
+        return sum(rawPH)/len(rawPH) 
 
     def SaveToDB(self, db: DBManager.DBManager):
         if self.m > 0 and self.b > 0:

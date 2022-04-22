@@ -245,8 +245,20 @@ async def get_water_temp():
 
 
 @app.get("/sensor/ph")
-async def get_ph():
-    return {"ph": devices['sensor']['ph'].GetPH()}
+async def get_ph(reset:bool = None, calibrate:bool = None, refPH:float=None):
+    if calibrate is not None and refPH is not None:
+        result = devices['sensor']['ph'].AddCalibratePoint(refPH)
+        FileManager.SaveObjAsJson("devices.json", devices)
+        if result:
+            return {"status": "ok"}
+        else:
+            return {"status": "error"}
+    elif reset is not None:
+        devices['sensor']['ph'].ResetCalibratePoint()
+        FileManager.SaveObjAsJson("devices.json", devices)
+        return {"status": "ok"}
+    else:
+        return {"ph": devices['sensor']['ph'].GetPH()}
 
 
 @app.get("/sensor/tds")
