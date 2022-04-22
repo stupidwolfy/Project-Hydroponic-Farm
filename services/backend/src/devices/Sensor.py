@@ -331,7 +331,7 @@ class PHSensor(AnalogSensor, Repeatable):
         return sum(rawPH)/len(rawPH) 
 
     def SaveToDB(self, db: DBManager.DBManager):
-        if self.m > 0 and self.b > 0:
+        if len(self.calibrationPH) == 2:
             ph = self.GetPH()
             if ph is not None:
                 db.CreateDataTable(self.name, ["data"])

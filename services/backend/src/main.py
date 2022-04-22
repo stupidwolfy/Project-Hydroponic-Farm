@@ -312,7 +312,8 @@ async def cloud_setup(verified: bool = None) -> dict:
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
     data = await websocket.receive_text()
-    if data is "temp":
+    await websocket.send_json({"got": data})
+    if data == "temp":
         try:
             while True:
                 await websocket.send_json({"temp": devices['sensor']['sht31'].Get_temp()})
@@ -320,7 +321,7 @@ async def websocket_endpoint(websocket: WebSocket):
         except IndexError:
             await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
 
-    elif data is "humid":
+    elif data == "humid":
         try:
             while True:
                 await websocket.send_json({"humid": devices['sensor']['sht31'].Get_Humid()})
@@ -328,10 +329,13 @@ async def websocket_endpoint(websocket: WebSocket):
         except IndexError:
             await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
 
-    elif data is "ph":
+    elif data == "ph":
         try:
             while True:
                 await websocket.send_json({"ph": devices['sensor']['ph'].GetPH()})
                 await asyncio.sleep(5)
         except IndexError:
             await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+    
+    else:
+        await websocket.send_json({"status": "Error", "detail": "No data."})
