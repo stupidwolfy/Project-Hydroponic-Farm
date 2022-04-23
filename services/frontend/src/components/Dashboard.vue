@@ -95,7 +95,7 @@
               <div class="data">
                 <p>EC</p>
                 <h4>
-                  <strong>10</strong>
+                  <strong>{{ ec }}</strong>
                 </h4>
               </div>
             </div>
@@ -131,9 +131,12 @@
                   aria-valuemax="100"
                   aria-valuemin="0"
                   aria-valuenow="25"
-                  class="progress-bar bg-primary"
+                  :class="[
+                    'progress-bar',
+                    pHRealtime > 6 ? 'bg-warning ' : 'bg-primary',
+                  ]"
                   role="progressbar"
-                  style="width: 50%"
+                  v-bind:style="'width:' + pHRealtime + '%'"
                 ></div>
               </div>
               <mdb-card-text>Better than last week (25%)</mdb-card-text>
@@ -1092,6 +1095,7 @@ export default {
       phData: [],
       isToggled: [false, false, false, false, false, false, false, false],
       pHRealtime:"",
+      ec:"",
     };
   },
   methods: {
@@ -1147,7 +1151,16 @@ export default {
     },
     getPHrealtime() {
       axios.get("/sensor/ph").then((res) =>{
-        this.pHRealtime = res.data.ph.toFixed(2);
+        if(res.data.ph == null){
+          this.pHRealtime = "ไม่มีข้อมูล"
+        }else{
+          this.pHRealtime = res.data.ph.toFixed(2);
+        }
+      })
+    },
+    getEC(){
+      axios.get("/sensor/tds").then((res) => {
+        this.ec = res.data.ec.toFixed(2);
       })
     }
   },
@@ -1156,7 +1169,9 @@ export default {
     this.getPHData();
     this.getStatusRelay();
     this.getTemp();
-    this.getPHrealtime();
+    this.interval1 = setInterval(() => this.getPHrealtime(), 5000);
+    //this.getPHrealtime();
+    this.getEC();
   },
   watch: {
     phData(newData) {

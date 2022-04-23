@@ -11,9 +11,102 @@
             <p>Using for fertilizer setup.</p>
             <mdb-tbl>
               <thead>
-                <tr><th>Day</th><th>A</th><th>B</th><th>A Interval</th><th>B Interval</th><th>Mode</th></tr>
-              </thead><tbody>
-                <tr><th scope="row">1</th><td>10 g</td><td>20 g</td><td>10 min</td><td>10 min</td><td>Force Auto</td></tr><tr><th scope="row">2</th><td>10 g</td><td>20 g</td><td>10 min</td><td>10 min</td><td>Force Auto</td></tr><tr><th scope="row">3</th><td>10 g</td><td>20 g</td><td>10 min</td><td>10 min</td><td>Force Auto</td></tr>
+                <tr>
+                  <th>Day</th>
+                  <th>A</th>
+                  <th>B</th>
+                  <th>A Interval</th>
+                  <th>B Interval</th>
+                  <th>Mode</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">1</th>
+                  <td>10 g</td>
+                  <td>20 g</td>
+                  <td>10 min</td>
+                  <td>10 min</td>
+                  <td>Force Auto</td>
+                </tr>
+                <tr>
+                  <th scope="row">2</th>
+                  <td>10 g</td>
+                  <td>20 g</td>
+                  <td>10 min</td>
+                  <td>10 min</td>
+                  <td>Force Auto</td>
+                </tr>
+                <tr>
+                  <th scope="row">3</th>
+                  <td>10 g</td>
+                  <td>20 g</td>
+                  <td>10 min</td>
+                  <td>10 min</td>
+                  <td>Force Auto</td>
+                </tr>
+                <tr>
+                  <th scope="row">
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </th>
+                  <td>
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </td>
+                </tr>
               </tbody>
             </mdb-tbl>
             <!-- <h3 class="mt-5 text-left"><strong>Table head options</strong></h3>
@@ -47,26 +140,178 @@
         </mdb-card>
       </mdb-col>
     </mdb-row>
+    <!-- <mdb-row>
+      <mdb-col md="10">
+        <tbody>
+          <tr>
+            <td>
+              <div class="form-group">
+                <label for="example3">Small input</label>
+                <input
+                  type="text"
+                  id="example3"
+                  class="form-control form-control-sm"
+                />
+              </div>
+            </td>
+            <td>
+              <div class="form-group">
+                <label for="example3">Small input</label>
+                <input
+                  type="text"
+                  id="example3"
+                  class="form-control form-control-sm"
+                />
+              </div>
+            </td>
+            <td>
+              <div class="form-group">
+                <label for="example3">Small input</label>
+                <input
+                  type="text"
+                  id="example3"
+                  class="form-control form-control-sm"
+                />
+              </div>
+            </td>
+            <td>
+              <div class="form-group">
+                <label for="example3">Small input</label>
+                <input
+                  type="text"
+                  id="example3"
+                  class="form-control form-control-sm"
+                />
+              </div>
+            </td>
+            <td>
+              <div class="form-group">
+                <label for="example3">Small input</label>
+                <input
+                  type="text"
+                  id="example3"
+                  class="form-control form-control-sm"
+                />
+              </div>
+            </td>
+            <td>
+              <div class="form-group">
+                <label for="example3">Small input</label>
+                <input
+                  type="text"
+                  id="example3"
+                  class="form-control form-control-sm"
+                />
+              </div>
+            </td>
+          </tr>
+        </tbody>
+      </mdb-col>
+    </mdb-row>-->
+    <mdb-row>
+      <mdb-col md="12">
+          <mdb-view class="gradient-card-header blue darken-2">
+          </mdb-view>
+          <mdb-card-body>
+            <mdb-tbl>
+              <thead>
+                <tr>
+                  <th>Day</th>
+                  <th>A</th>
+                  <th>B</th>
+                  <th>A Interval</th>
+                  <th>B Interval</th>
+                  <th>Mode</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row">
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </th>
+                  <td>
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </td>
+                  <td>
+                    <div class="form-group">
+                      <label for="example3">Small input</label>
+                      <input
+                        type="text"
+                        id="example3"
+                        class="form-control form-control-sm"
+                      />
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </mdb-tbl>
+          </mdb-card-body>
+      </mdb-col>
+    </mdb-row>
   </section>
 </template>
 
 <script>
-import { mdbRow, mdbCol, mdbCard, mdbView, mdbCardBody, mdbTbl } from 'mdbvue'
+import { mdbRow, mdbCol, mdbCard, mdbView, mdbCardBody, mdbTbl } from "mdbvue";
 
 export default {
-  name: 'Tables',
+  name: "Tables",
   components: {
     mdbRow,
     mdbCol,
     mdbCard,
     mdbView,
     mdbCardBody,
-    mdbTbl
+    mdbTbl,
   },
-  data () {
-    return {}
-  }
-}
+  data() {
+    return {};
+  },
+};
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
