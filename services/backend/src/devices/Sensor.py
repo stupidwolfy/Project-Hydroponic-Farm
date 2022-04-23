@@ -11,6 +11,7 @@ from src import DBManager
 import adafruit_ads1x15.ads1115 as ADS
 from adafruit_ads1x15.analog_in import AnalogIn
 import adafruit_sht31d
+from w1thermsensor import W1ThermSensor
 import math
 from pydantic import BaseModel
 
@@ -239,20 +240,26 @@ class SHT31(Sensor, Repeatable):
         return super().PeriodicTask(self.SaveToDB, self.autoSaveInterval, scheduler, args)
 
 
-class TempSensor(AnalogSensor, Repeatable):
-    def __init__(self, name: str, device_id: int, ADCDevice: ADS1115, ADCChannel: int, multiplier: float = 10, autoSaveInterval=30):
-        super().__init__(name, device_id, ADCDevice, ADCChannel)
-        self.multiplier = multiplier
+class TempSensor(Sensor, Repeatable):
+    def __init__(self, name: str, device_id: int, pin:int, w1address:str, autoSaveInterval=30):
+        super().__init__(name, device_id)
         self.autoSaveInterval = autoSaveInterval
+        self.pin = pin
+        self.w1address = w1address
+        
+        self.Setup()
 
-    # Get raw Voltage, for calibation
-    def getVoltage(self):
-        return self.ADCDevice.getVoltage(self.ADCChannel)
+    def Setup(self):
+        try:
+            self.sensor = W1ThermSensor(self.w1address)
+            self.isConnected = True
+        except:
+            self.isConnected = False
 
     def GetTemp(self):
-        voltage = self.getVoltage()
-        if voltage is not None:
-            return voltage*self.multiplier
+        if self.isConnected:
+            temp = self.sensor.get_temperature()
+            return temp
 
     def SaveToDB(self, db: DBManager.DBManager):
         temp = self.GetTemp()
@@ -333,7 +340,7 @@ class PHSensor(AnalogSensor, Repeatable):
     def SaveToDB(self, db: DBManager.DBManager):
         if len(self.calibrationPH) == 2:
             ph = self.GetPH()
-            if ph is not None:
+            if ph != -1:
                 db.CreateDataTable(self.name, ["data"])
                 db.Append(self.name, [ph])
 
@@ -353,6 +360,8 @@ class TDSSensor(AnalogSensor, Repeatable):
     def GetPPM(self, waterTemp: float):
         voltage = self.getVoltage()
         if voltage is not None:
+            if waterTemp is None:
+                waterTemp = 25.0
             compensationCoefficient = 1.0+0.02*(waterTemp-25.0)
             compensationVolatge = voltage / compensationCoefficient
             tdsValue = (133.42*math.pow(compensationVolatge, 3) - 255.86*math.pow(compensationVolatge, 2)

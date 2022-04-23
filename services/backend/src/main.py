@@ -48,18 +48,19 @@ if devices is None:
     devices['sensor']['switchs'] = Sensor.Switch(
         "Water-LMSW", device_id=0, pin=18)
 
+    devices['sensor']['water-temp'] = Sensor.TempSensor("water-temp", 0, 4, "00-780000000000")
+
     # Create i2c device (ADS1115 and SHT31)
     devices['sensor']['adc'] = Sensor.ADS1115(
         "ADC", device_id=0)  # i2c pin, default address
 
     devices['sensor']['sht31'] = Sensor.SHT31("air-indoor", 0)
 
+
     # Create Analog device if adc is connected
     if 'adc' in devices['sensor']:
         devices['sensor']['ph'] = Sensor.PHSensor(
             "ph", 0, devices['sensor']['adc'], 0)
-        devices['sensor']['water-temp'] = Sensor.TempSensor(
-            "water-temp", 0, devices['sensor']['adc'], 1)
         devices['sensor']['tds'] = Sensor.TDSSensor(
             "tds", 0, devices['sensor']['adc'], 2)
 
@@ -69,6 +70,9 @@ if devices is None:
 else:
     for relay in devices['relays']:
         relay.Setup()
+
+    if 'water-temp' in devices['sensor']:
+        devices['sensor']['water-temp'].Setup()
 
     if 'adc' in devices['sensor']:
         devices['sensor']['adc'].Setup()
@@ -263,8 +267,9 @@ async def get_ph(reset:bool = None, calibrate:bool = None, refPH:float=None):
 
 @app.get("/sensor/tds")
 async def get_tds():
-    # dS/m
-    return {"tds": devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp()), "unit": "(dS/m)"}
+    tds = devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp())
+    ec = (tds * 2)
+    return {"tds": tds, "unit-tds": "ppm", "ec" :ec, "unit-ec":"uS/cm"}
 
 
 @app.get("/cam")
