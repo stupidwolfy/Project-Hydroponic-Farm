@@ -2,7 +2,7 @@ import sqlite3
 from contextlib import closing
 from datetime import datetime, timezone
 from abc import ABC, abstractmethod
-from typing import List
+from typing import List, Optional
 
 from numpy import empty
 
@@ -13,11 +13,11 @@ class DBManager(ABC):
         pass
 
     @abstractmethod
-    def CreateDataTable(self, tableName: str, tableHeaders: List[str]):
+    def CreateDataTable(self, tableName: str, tableHeaders: List[str], uniqueHeaders: Optional[List[str]] = None):
         pass
 
     @abstractmethod
-    def Append(self, tableName: str, recordList: List):
+    def Append(self, tableName: str, recordList: List, addTimeStamp = True):
         pass
 
     @abstractmethod
@@ -30,7 +30,7 @@ class SqlLite(DBManager):
         self.name = name
         #self.con = sqlite3.connect('./DB/' +name+'.db')
 
-    def CreateDataTable(self, tableName: str, tableHeaders: List[str]):
+    def CreateDataTable(self, tableName: str, tableHeaders: List[str], uniqueHeaders: Optional[List[str]] = None):
         tableName = tableName.replace(" ", "_")
         tableName = tableName.replace("-", "_")
         #cur =  self.con.cursor()
@@ -40,20 +40,21 @@ class SqlLite(DBManager):
 
         db_name = './DB/' + self.name+'.db'
         with closing(sqlite3.connect(db_name)) as con, con, closing(con.cursor()) as cur:
-            cur.execute("create table if not exists " + tableName +
-                        "(" + "Time_Stamp, " + ','.join(tableHeaders)+")")
+            #if no unique column
+            if uniqueHeaders is None:
+                 cur.execute("create table if not exists " + tableName +
+                             "(" + "Time_Stamp, " + ','.join(tableHeaders)+")")
+            else:
+                cur.execute("create table if not exists " + tableName +
+                             "(" + "Time_Stamp, " + ','.join(tableHeaders)+ ", UNIQUE("+ ','.join(uniqueHeaders) +") )")
             # return cur.fetchall()
 
-    def Append(self, tableName, recordList):
+    def Append(self, tableName, recordList, addTimeStamp = True):
         tableName = tableName.replace(" ", "_")
         tableName = tableName.replace("-", "_")
         # inject current datetime to list (utc time)
-        recordList.insert(0, datetime.now())
-        #cur =  self.con.cursor()
-        #cur.execute("insert into "+ tableName +" values (? " + ", ?"*(len(recordList)-1) + ")", recordList)
-
-        # if autoCommit:
-        #    self.Commit()
+        if addTimeStamp:
+            recordList.insert(0, datetime.now())
 
         db_name = './DB/' + self.name+'.db'
         with closing(sqlite3.connect(db_name)) as con, con, closing(con.cursor()) as cur:
@@ -61,8 +62,17 @@ class SqlLite(DBManager):
                         ", ?"*(len(recordList)-1) + ")", recordList)
             # return cur.fetchall()
 
+
+    def Replace(self, tableName, columIdname, columValue, targetColumnName, newValue):
+        tableName = tableName.replace(" ", "_")
+        tableName = tableName.replace("-", "_")
+
+        db_name = './DB/' + self.name+'.db'
+
+        with closing(sqlite3.connect(db_name)) as con, con, closing(con.cursor()) as cur:
+            cur.execute("UPDATE " + tableName + " SET ? = ? WHERE ? = ?", [targetColumnName, newValue, columIdname, columValue])
+
     def GetRecords(self, tableName=None, limit=-1):
-        #cur = self.con.cursor()
         db_name = './DB/' + self.name+'.db'
         with closing(sqlite3.connect(db_name)) as con, con, closing(con.cursor()) as cur:
             # Get all tables name
