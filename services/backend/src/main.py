@@ -33,9 +33,9 @@ if devices is None:
     devices = {'relays': [], 'sensor': {}}
 
     # Create Relay
-    relay1 = Output.Relay('Fertilizer-A', device_id=0, pin=24, activeLOW=True)
-    relay2 = Output.Relay('Fertilizer-B', device_id=1, pin=17, activeLOW=True)
-    relay3 = Output.Relay('PH-Down-Agent', device_id=2, pin=18, activeLOW=True)
+    relay1 = Output.Relay('Fertilizer-A', device_id=0, pin=24, ratePerSec=0.65, activeLOW=True)
+    relay2 = Output.Relay('Fertilizer-B', device_id=1, pin=17, ratePerSec=0.65, activeLOW=True)
+    relay3 = Output.Relay('PH-Down-Agent', device_id=2, pin=18, ratePerSec=0.65, activeLOW=True)
     relay4 = Output.Relay('LED-1', device_id=3, pin=22, activeLOW=True)
     relay5 = Output.Relay('LED-2', device_id=4, pin=5, activeLOW=True)
     relay6 = Output.Relay('FAN-1', device_id=5, pin=6, activeLOW=True)
@@ -205,7 +205,6 @@ async def edit_relay(number: int, new_relay: Output.RelayModel):
     else:
         return {"status": "Error", "detail": f"Relay ID {number} does not exist."}
 
-
 @app.get("/relay/{number}/{power}")
 async def relay_control(number: int, power: bool):
     try:
@@ -218,6 +217,13 @@ async def relay_control(number: int, power: bool):
     except IndexError:
         return {"status": "Error", "detail": "Device not found."}
 
+@app.get("/relay/on_by_rate/{number}/{amount}")
+async def relay_control(number: int, amount: int):
+    try:
+        await devices['relays'][number].OnRate(amount)
+        return {devices['relays'][number].name: amount}
+    except IndexError:
+        return {"status": "Error", "detail": "Device not found."}
 
 @app.get("/switch")
 async def switch_state():
@@ -266,10 +272,13 @@ async def get_ph(reset:bool = None, calibrate:bool = None, refPH:float=None):
 
 
 @app.get("/sensor/tds")
-async def get_tds():
-    tds = devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp())
-    ec = (tds * 2)
-    return {"tds": tds, "unit-tds": "ppm", "ec" :ec, "unit-ec":"uS/cm"}
+async def get_tds(getVoltage: bool =None):
+    if getVoltage is None:
+        tds = devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp())
+        ec = (tds * 2)
+        return {"tds": tds, "unit-tds": "ppm", "ec" :ec, "unit-ec":"uS/cm"}
+    else:
+        return {"voltage" : devices['sensor']['tds'].getVoltage()}
 
 
 @app.get("/cam")
@@ -338,9 +347,18 @@ async def websocket_endpoint(websocket: WebSocket):
         try:
             while True:
                 await websocket.send_json({"ph": devices['sensor']['ph'].GetPH()})
-                await asyncio.sleep(5)
+                await asyncio.sleep(1)
         except IndexError:
             await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
     
+    elif data == "tds":
+        try:
+            while True:
+                tds = devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp())
+                ec = (tds * 2)
+                await websocket.send_json({"tds": tds, "unit-tds": "ppm", "ec" :ec, "unit-ec":"uS/cm"})
+                await asyncio.sleep(1)
+        except IndexError:
+            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
     else:
         await websocket.send_json({"status": "Error", "detail": "No data."})
