@@ -142,7 +142,10 @@ class FirebaseHandler(Repeatable):
 
     def RefreshToken(self):
         if self.isActivated:
-            self.user = self.auth.refresh(self.user['refreshToken'])
+            try:
+                self.user = self.auth.refresh(self.user['refreshToken'])
+            except ConnectionError(e):
+                print(f"Error: Refresh token failed. {e}")
 
     def AutoRefreshToken(self, scheduler: sched.scheduler):
         return super().PeriodicTask(self.RefreshToken, self.updateTokenInterval, scheduler, ())
