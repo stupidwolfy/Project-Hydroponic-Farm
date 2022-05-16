@@ -218,12 +218,13 @@ class SHT31(Sensor, Repeatable):
         try:
             self.sensor = adafruit_sht31d.SHT31D(i2c, address=self.address)
             self.isActivated = True
-        except ValueError:
+        except (ValueError, OSError):
             self.isActivated = False
 
     def Get_temp(self):
         if self.isActivated:
             return round(self.sensor.temperature, 2)
+
 
     def Get_Humid(self):
         if self.isActivated:

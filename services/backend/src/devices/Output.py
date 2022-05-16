@@ -6,6 +6,7 @@ from typing import AnyStr, Callable, Tuple, Optional
 import sched
 from src import DBManager
 from pydantic import BaseModel
+import asyncio
 
 GPIO.setmode(GPIO.BCM)  # Use GPIOxx number
 
@@ -26,13 +27,14 @@ class Relay(Repeatable):
         # GPIO.setup(self.pin, GPIO.OUT)
         # return self.name, self.device_id, self.pin, self.activeLOW
 
-    def __init__(self, name: str, device_id: int, pin: int, activeLOW=False, autoSaveInterval = 30):
+    def __init__(self, name: str, device_id: int, pin: int, ratePerSec = 1, activeLOW=False, autoSaveInterval = 30):
         self.name = name
         self.pin = pin
         self.activeLOW = activeLOW
         self.device_id = device_id
         self.isOn = False
         self.autoSaveInterval = autoSaveInterval
+        self.ratePerSec = ratePerSec #0.65
 
         GPIO.setup(self.pin, GPIO.OUT)
         if (self.activeLOW is True):
@@ -61,6 +63,12 @@ class Relay(Repeatable):
                 GPIO.output(self.pin, 0)
             else:
                 GPIO.output(self.pin, 1)
+
+    async def OnRate(self, amount):
+        self.isON = True
+        self.ON()
+        await asyncio.sleep(amount/self.ratePerSec)
+        self.OFF()
 
     def OFF(self):
         self.isON = False
@@ -100,7 +108,8 @@ class Relay(Repeatable):
 
 
 class RelayModel(BaseModel):
-    name: str
+    name: Optional[str]
     #device_id: int
     #pin: int
-    activeLOW: bool
+    activeLOW: Optional[bool]
+    ratePerSec: Optional[float]
