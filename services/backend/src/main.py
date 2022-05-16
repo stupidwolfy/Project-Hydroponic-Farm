@@ -314,10 +314,10 @@ async def cloud_setup(verified: bool = None) -> dict:
         return requestVerifyData
 
     else:
-        verifCompleated = apis['cloud'].VerifyDevice()
+        verifyCompleated = apis['cloud'].VerifyDevice()
         if verifyCompleated:
             saveResult = FileManager.SaveObjAsJson("apis.json", apis)
-        return {"result": verified}
+        return {"result": verifyCompleated}
 
 # Websocket test
 
