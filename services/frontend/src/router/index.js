@@ -1,7 +1,7 @@
 import Vue from 'vue';
 import Router from 'vue-router';
 import Dashboard from '@/components/Dashboard'
-import Profile from '@/components/Profile'
+import CheckConn from '@/components/CheckConn'
 import Tables from '@/components/Tables'
 import Maps from '@/components/Maps'
 import BadGateway from '@/components/BadGateway'
@@ -20,10 +20,10 @@ export default new Router({
       alias: '/'
     },
     {
-      path: '/profile',
-      name: 'Profile',
+      path: '/CheckConn',
+      name: 'CheckConn',
       props: { page: 2 },
-      component: Profile
+      component: CheckConn
     },
     {
       path: '/tables',

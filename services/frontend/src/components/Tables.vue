@@ -140,74 +140,7 @@
         </mdb-card>
       </mdb-col>
     </mdb-row>
-    <!-- <mdb-row>
-      <mdb-col md="10">
-        <tbody>
-          <tr>
-            <td>
-              <div class="form-group">
-                <label for="example3">Small input</label>
-                <input
-                  type="text"
-                  id="example3"
-                  class="form-control form-control-sm"
-                />
-              </div>
-            </td>
-            <td>
-              <div class="form-group">
-                <label for="example3">Small input</label>
-                <input
-                  type="text"
-                  id="example3"
-                  class="form-control form-control-sm"
-                />
-              </div>
-            </td>
-            <td>
-              <div class="form-group">
-                <label for="example3">Small input</label>
-                <input
-                  type="text"
-                  id="example3"
-                  class="form-control form-control-sm"
-                />
-              </div>
-            </td>
-            <td>
-              <div class="form-group">
-                <label for="example3">Small input</label>
-                <input
-                  type="text"
-                  id="example3"
-                  class="form-control form-control-sm"
-                />
-              </div>
-            </td>
-            <td>
-              <div class="form-group">
-                <label for="example3">Small input</label>
-                <input
-                  type="text"
-                  id="example3"
-                  class="form-control form-control-sm"
-                />
-              </div>
-            </td>
-            <td>
-              <div class="form-group">
-                <label for="example3">Small input</label>
-                <input
-                  type="text"
-                  id="example3"
-                  class="form-control form-control-sm"
-                />
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </mdb-col>
-    </mdb-row>-->
+    
     <mdb-row>
       <mdb-col md="12">
           <mdb-view class="gradient-card-header blue darken-2">
@@ -297,7 +230,7 @@
 
 <script>
 import { mdbRow, mdbCol, mdbCard, mdbView, mdbCardBody, mdbTbl } from "mdbvue";
-
+import axios from "axios";
 export default {
   name: "Tables",
   components: {
@@ -309,8 +242,21 @@ export default {
     mdbTbl,
   },
   data() {
-    return {};
+    return {
+      nutrientTable: {},
+
+    };
   },
+  methods: {
+    getTable(){
+      axios.get("/nutrient/data/0").then((res) => {
+        this.nutrientTable = res.data;
+      })
+    }
+  },
+  created() {
+    this.getTable();
+  }
 };
 </script>
 
