@@ -66,7 +66,7 @@ class NutrientManager(Repeatable):
         return self.activeTableID
 
     def ChangeActiveTable(self, activeTableID: int):
-        if activeTableID >= 0 and activeTableID <= len(self.nutrientTables): 
+        if activeTableID >= 0 and activeTableID < len(self.nutrientTables): 
             self.activeTableID = activeTableID
             self.Setup()
             return True
@@ -125,7 +125,14 @@ class NutrientManager(Repeatable):
         return True
 
     def GetActivation(self) -> bool:
-        return self.activate 
+        return self.activate
+
+    def GetSrartDate(self) -> date:
+        return self.startDate
+
+    def SetStartDate(self, newDate: date):
+        self.startDate(newDate)
+        return True
 
     async def AdjustNutrient(self, nutrientARelay: Output.Relay, nutrientBRelay: Output.Relay, PHDownRelay: Output.Relay, phSensor: Sensor.PHSensor, tdsSensor: Sensor.TDSSensor):
         if self.activate:

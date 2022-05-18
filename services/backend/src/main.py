@@ -4,6 +4,7 @@ from fastapi import FastAPI, HTTPException, Depends, WebSocket
 from fastapi_utils.tasks import repeat_every
 from fastapi.middleware.cors import CORSMiddleware
 
+from datetime import date
 import time
 import sched
 import asyncio
@@ -330,7 +331,7 @@ async def remove_nutrient_row(nutrientTableID: int, row: int):
     return nutrientManager.RemoveTableRow(nutrientTableID, row)
 
 @app.get("/nutrient/manage")
-async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: bool = None, getActivation: bool = None, setActivation: bool = None):
+async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: bool = None, getActivation: bool = None, setActivation: bool = None, getStartDate: bool = None, newStartDate: date = None):
     if newActiveTable is not None:
         return {"result ": nutrientManager.ChangeActiveTable(newActiveTable)}
 
@@ -341,7 +342,13 @@ async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: 
         return nutrientManager.GetActivation()
 
     if setActivation:
-        return nutrientManager.SetActivation(setActivation)
+        return nutrientManager.Activate(setActivation)
+
+    if getStartDate:
+        return nutrientManager.GetSrartDate()
+    
+    if newStartDate is not None:
+        return nutrientManager.SetStartDate(newStartDate)
     
 @app.get("/cam")
 async def get_image():

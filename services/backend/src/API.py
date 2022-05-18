@@ -154,12 +154,8 @@ class FirebaseHandler(Repeatable):
     def SendtoDB(self, data_name: str, data):
         if data is not None:
             if self.isActivated:
-                if data_name in self.allowed_data_name:
-                    results = self.db.child(
-                        f"users/{self.localId}/device").update({data_name: data}, self.user['idToken'])
-                else:
-                    print(
-                        f"FirebaseDB ERROR: Not allow data_name: {data_name}")
+                results = self.db.child(
+                    f"users/{self.localId}/device").update({data_name: data}, self.user['idToken'])
 
     def AutoSendToDB(self, scheduler: sched.scheduler, args: Tuple):
         return super().PeriodicTask(self.SendtoDB, self.sendToDBInterval, scheduler, args)
