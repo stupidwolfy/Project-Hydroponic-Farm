@@ -92,6 +92,7 @@ class FirebaseHandler(Repeatable):
         self.firebase = Firebase(self.config)
         self.auth = self.firebase.auth()
         self.db = self.firebase.database()
+        self.storage = self.firebase.storage()
 
         # try:
         #    self.user = auth.sign_in_with_email_and_password(email, password)
@@ -103,8 +104,8 @@ class FirebaseHandler(Repeatable):
         # For Re-setup when load from file
         #self.firebase = Firebase(self.config)
         #self.auth = self.firebase.auth()
-        if self.isActivated:
-            self.RefreshToken()
+        self.isActivated = False
+        #self.RefreshToken()
 
     def RequestVerifyDevice(self):
         # Verify device by ask user to login and enter device code in web browser
