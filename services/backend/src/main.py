@@ -15,14 +15,14 @@ from starlette.responses import StreamingResponse
 from sqlite3 import OperationalError
 import RPi.GPIO as GPIO
 
-from src import DBManager, FileManager, API
-
+from src import DBManager, FileManager, API, Nutrient
 from src.devices import Output, Sensor, CamHandler
 
 HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 
 devices = FileManager.LoadObjFromJson("devices.json")
 apis = FileManager.LoadObjFromJson("apis.json")
+nutrientManager = FileManager.LoadObjFromJson("nutrientManager.json")
 
 GPIO.cleanup()
 
@@ -33,9 +33,12 @@ if devices is None:
     devices = {'relays': [], 'sensor': {}}
 
     # Create Relay
-    relay1 = Output.Relay('Fertilizer-A', device_id=0, pin=24, ratePerSec=0.65, activeLOW=True)
-    relay2 = Output.Relay('Fertilizer-B', device_id=1, pin=17, ratePerSec=0.65, activeLOW=True)
-    relay3 = Output.Relay('PH-Down-Agent', device_id=2, pin=18, ratePerSec=0.65, activeLOW=True)
+    relay1 = Output.Relay('Fertilizer-A', device_id=0,
+                          pin=24, ratePerSec=0.65, activeLOW=True)
+    relay2 = Output.Relay('Fertilizer-B', device_id=1,
+                          pin=17, ratePerSec=0.65, activeLOW=True)
+    relay3 = Output.Relay('PH-Down-Agent', device_id=2,
+                          pin=18, ratePerSec=0.65, activeLOW=True)
     relay4 = Output.Relay('LED-1', device_id=3, pin=22, activeLOW=True)
     relay5 = Output.Relay('LED-2', device_id=4, pin=5, activeLOW=True)
     relay6 = Output.Relay('FAN-1', device_id=5, pin=6, activeLOW=True)
@@ -48,14 +51,14 @@ if devices is None:
     devices['sensor']['switchs'] = Sensor.Switch(
         "Water-LMSW", device_id=0, pin=18)
 
-    devices['sensor']['water-temp'] = Sensor.TempSensor("water-temp", 0, 4, "00-780000000000")
+    devices['sensor']['water-temp'] = Sensor.TempSensor(
+        "water-temp", 0, 4, "00-780000000000")
 
     # Create i2c device (ADS1115 and SHT31)
     devices['sensor']['adc'] = Sensor.ADS1115(
         "ADC", device_id=0)  # i2c pin, default address
 
     devices['sensor']['sht31'] = Sensor.SHT31("air-indoor", 0)
-
 
     # Create Analog device if adc is connected
     if 'adc' in devices['sensor']:
@@ -97,6 +100,18 @@ if apis is None:
 else:
     apis['cloud'].Setup()
     print(f"Apis loaded")
+
+
+if nutrientManager is None:
+    nutrientManager = Nutrient.NutrientManager(0)
+
+    saveResult = FileManager.SaveObjAsJson(
+        "nutrientTables.json", nutrientManager)
+    print(f"NutrientManager created: {saveResult}")
+
+else:
+    nutrientManager.Setup()
+    print("nutrientManager loaded")
 
 # do background save sensor data to DB
 dbThread = DBManager.SqlLite("Sensor_history")
@@ -205,6 +220,7 @@ async def edit_relay(number: int, new_relay: Output.RelayModel):
     else:
         return {"status": "Error", "detail": f"Relay ID {number} does not exist."}
 
+
 @app.get("/relay/{number}/{power}")
 async def relay_control(number: int, power: bool):
     try:
@@ -217,6 +233,7 @@ async def relay_control(number: int, power: bool):
     except IndexError:
         return {"status": "Error", "detail": "Device not found."}
 
+
 @app.get("/relay/on_by_rate/{number}/{amount}")
 async def relay_control(number: int, amount: int):
     try:
@@ -224,6 +241,7 @@ async def relay_control(number: int, amount: int):
         return {devices['relays'][number].name: amount}
     except IndexError:
         return {"status": "Error", "detail": "Device not found."}
+
 
 @app.get("/switch")
 async def switch_state():
@@ -255,7 +273,7 @@ async def get_water_temp():
 
 
 @app.get("/sensor/ph")
-async def get_ph(reset:bool = None, calibrate:bool = None, refPH:float=None):
+async def get_ph(reset: bool = None, calibrate: bool = None, refPH: float = None):
     if calibrate is not None and refPH is not None:
         result = devices['sensor']['ph'].AddCalibratePoint(refPH)
         FileManager.SaveObjAsJson("devices.json", devices)
@@ -272,13 +290,14 @@ async def get_ph(reset:bool = None, calibrate:bool = None, refPH:float=None):
 
 
 @app.get("/sensor/tds")
-async def get_tds(getVoltage: bool =None):
+async def get_tds(getVoltage: bool = None):
     if getVoltage is None:
-        tds = devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp())
+        tds = devices['sensor']['tds'].GetPPM(
+            devices['sensor']['water-temp'].GetTemp())
         ec = (tds * 2)
-        return {"tds": tds, "unit-tds": "ppm", "ec" :ec, "unit-ec":"uS/cm"}
+        return {"tds": tds, "unit-tds": "ppm", "ec": ec, "unit-ec": "uS/cm"}
     else:
-        return {"voltage" : devices['sensor']['tds'].getVoltage()}
+        return {"voltage": devices['sensor']['tds'].getVoltage()}
 
 
 @app.get("/cam")
@@ -350,13 +369,14 @@ async def websocket_endpoint(websocket: WebSocket):
                 await asyncio.sleep(1)
         except IndexError:
             await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
-    
+
     elif data == "tds":
         try:
             while True:
-                tds = devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp())
+                tds = devices['sensor']['tds'].GetPPM(
+                    devices['sensor']['water-temp'].GetTemp())
                 ec = (tds * 2)
-                await websocket.send_json({"tds": tds, "unit-tds": "ppm", "ec" :ec, "unit-ec":"uS/cm"})
+                await websocket.send_json({"tds": tds, "unit-tds": "ppm", "ec": ec, "unit-ec": "uS/cm"})
                 await asyncio.sleep(1)
         except IndexError:
             await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
