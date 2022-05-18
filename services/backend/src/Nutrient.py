@@ -39,6 +39,7 @@ class NutrientManager(Repeatable):
 
         self.activeTableID = activeTableID
         self.adjustNutrientInterval = adjustNutrientInterval
+        self.activate = False
 
         self.Setup()
 
@@ -119,28 +120,36 @@ class NutrientManager(Repeatable):
         
         return False
 
-    async def AdjustNutrient(self, nutrientARelay: Output.Relay, nutrientBRelay: Output.Relay, PHDownRelay: Output.Relay, phSensor: Sensor.PHSensor, tdsSensor: Sensor.TDSSensor):
-        activeTable = self.nutrientTables[self.activeTableID]
-        dayGap = date.today() - self.startDate
-        #if current day still within day in table
-        if dayGap.days <= len(activeTable.nutrientRows):
-            ph = phSensor.GetPH()
-            ec = tdsSensor.GetPPM()
-            if ph is -1 or ec is None:
-                return
-            
-            #fix ph too high
-            if ph > activeTable.nutrientRows[dayGap].maxPH:
-                PHDownRelay.OnRate(activeTable.phDownFeedAmount)
+    def Activate(self, activation : bool):
+        self.activate = activation
+        return True
 
-            #fix ec too low
-            if ec < activeTable.nutrientRows[dayGap].minEC:
-                #add nutrientA
-                await nutrientARelay.OnRate(activeTable.nutrientFeedAmount)
-                #wait few hour
-                await asyncio.sleep(nutrientABGapTime)
-                #add nutrientB
-                await nutrientBRelay.OnRate(activeTable.nutrientFeedAmount)
+    def GetActivation(self) -> bool:
+        return self.activate 
+
+    async def AdjustNutrient(self, nutrientARelay: Output.Relay, nutrientBRelay: Output.Relay, PHDownRelay: Output.Relay, phSensor: Sensor.PHSensor, tdsSensor: Sensor.TDSSensor):
+        if self.activate:
+            activeTable = self.nutrientTables[self.activeTableID]
+            dayGap = date.today() - self.startDate
+            #if current day still within day in table
+            if dayGap.days <= len(activeTable.nutrientRows):
+                ph = phSensor.GetPH()
+                ec = tdsSensor.GetPPM()
+                if ph is -1 or ec is None:
+                    return
+                
+                #fix ph too high
+                if ph > activeTable.nutrientRows[dayGap].maxPH:
+                    PHDownRelay.OnRate(activeTable.phDownFeedAmount)
+    
+                #fix ec too low
+                if ec < activeTable.nutrientRows[dayGap].minEC:
+                    #add nutrientA
+                    await nutrientARelay.OnRate(activeTable.nutrientFeedAmount)
+                    #wait few hour
+                    await asyncio.sleep(nutrientABGapTime)
+                    #add nutrientB
+                    await nutrientBRelay.OnRate(activeTable.nutrientFeedAmount)
 
     def AutoAdjustNutrient(self, scheduler: sched.scheduler, args: Tuple):
         return super().PeriodicTask(self.AdjustNutrient, self.adjustNutrientInterval, scheduler, args)

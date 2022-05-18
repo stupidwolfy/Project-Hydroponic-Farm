@@ -330,12 +330,18 @@ async def remove_nutrient_row(nutrientTableID: int, row: int):
     return nutrientManager.RemoveTableRow(nutrientTableID, row)
 
 @app.get("/nutrient/manage")
-async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: bool = None):
+async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: bool = None, getActivation: bool = None, setActivation: bool = None):
     if newActiveTable is not None:
         return {"result ": nutrientManager.ChangeActiveTable(newActiveTable)}
 
     if getActiveTableID:
         return {"id": nutrientManager.getActiveTableID()}
+
+    if getActivation:
+        return nutrientManager.GetActivation()
+
+    if setActivation:
+        return nutrientManager.SetActivation(setActivation)
     
 @app.get("/cam")
 async def get_image():
