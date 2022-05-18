@@ -3,7 +3,7 @@
     <!--Navbar-->
     <mdb-navbar class="flexible-navbar white" light position="top" scrolling>
       <mdb-navbar-brand href="https://mdbootstrap.com/docs/vue/" target="_blank"
-        >MDB</mdb-navbar-brand
+        >Hydro Ponic</mdb-navbar-brand
       >
       <mdb-navbar-toggler>
         <mdb-navbar-nav left>
@@ -12,31 +12,18 @@
           >
         </mdb-navbar-nav>
         <mdb-navbar-nav right>
-          <mdb-nav-item href="#!" waves-fixed
-            ><mdb-icon fab class="text-black" icon="facebook-square"
-          /></mdb-nav-item>
-          <mdb-nav-item href="#!" waves-fixed
-            ><mdb-icon fab icon="twitter"
-          /></mdb-nav-item>
           <mdb-nav-item
-            href="https://github.com/mdbootstrap/bootstrap-material-design"
+            href="https://github.com/stupidwolfy/Project-Hydroponic-Farm"
             waves-fixed
             class="border border-light rounded mr-1"
             target="_blank"
-            ><mdb-icon fab icon="github" class="mr-2" />MDB GitHub
-          </mdb-nav-item>
-          <mdb-nav-item
-            href="https://mdbootstrap.com/products/vue-ui-kit/"
-            waves-fixed
-            class="border border-light rounded"
-            target="_blank"
-            ><mdb-icon icon="gem" far class="mr-2" />Go Pro
+            ><mdb-icon fab icon="github" class="mr-2" />GitHub
           </mdb-nav-item>
         </mdb-navbar-nav>
       </mdb-navbar-toggler>
     </mdb-navbar>
     <!--/.Navbar-->
-    
+
     <!-- Sidebar -->
     <div class="sidebar-fixed position-fixed">
       <a class="logo-wrapper"
@@ -53,13 +40,7 @@
             />Dashboard</mdb-list-group-item
           >
         </router-link>
-        <!-- <router-link to="/profile" @click.native="activeItem = 2">
-          <mdb-list-group-item
-            :action="true"
-            :class="activeItem === 2 && 'active'"
-            ><mdb-icon icon="user" class="mr-3" />Profile</mdb-list-group-item
-          >
-        </router-link> -->
+
         <router-link to="/tables" @click.native="activeItem = 3">
           <mdb-list-group-item
             :action="true"
@@ -67,23 +48,14 @@
             ><mdb-icon icon="table" class="mr-3" />Tables</mdb-list-group-item
           >
         </router-link>
-        <!-- <router-link to="/maps" @click.native="activeItem = 4">
+
+        <router-link to="/CheckConn" @click.native="activeItem = 2">
           <mdb-list-group-item
             :action="true"
-            :class="activeItem === 4 && 'active'"
-            ><mdb-icon icon="map" class="mr-3" />Maps</mdb-list-group-item
+            :class="activeItem === 2 && 'active'"
+            ><mdb-icon icon="user" class="mr-3" />Could</mdb-list-group-item
           >
         </router-link>
-        <router-link to="/404" @click.native="activeItem = 5">
-          <mdb-list-group-item
-            :action="true"
-            :class="activeItem === 5 && 'active'"
-            ><mdb-icon
-              icon="exclamation"
-              class="mr-3"
-            />404</mdb-list-group-item
-          >
-        </router-link> -->
       </mdb-list-group>
     </div>
     <!-- /Sidebar  -->
@@ -140,7 +112,7 @@ import {
   mdbListGroup,
   mdbListGroupItem,
   mdbFooter,
-  waves
+  waves,
 } from "mdbvue";
 
 export default {
@@ -155,17 +127,17 @@ export default {
     mdbListGroup,
     mdbListGroupItem,
     mdbIcon,
-    ftr: mdbFooter
+    ftr: mdbFooter,
   },
   data() {
     return {
-      activeItem: 1
+      activeItem: 1,
     };
   },
   beforeMount() {
     this.activeItem = this.$route.matched[0].props.default.page;
   },
-  mixins: [waves]
+  mixins: [waves],
 };
 </script>
 
