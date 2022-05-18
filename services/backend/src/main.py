@@ -153,6 +153,8 @@ def Background_DBAutoSave():
         relay.AutoSaveToDB(scheduler, (dbThread,))
         apis['cloud'].AutoSendToDB(scheduler, (f"relay-{i}", relay.getState()))
 
+    nutrientManager.AutoAdjustNutrient(scheduler, (devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds']))
+
     # scheduler.run()
 
 
@@ -304,12 +306,16 @@ async def get_nutrient_tables():
     return nutrientManager.GetTable()
 
 @app.post("/nutrient/data")
-async def create_nutrient_table(tableName: str):
-    return nutrientManager.CreateTable(tableName)
+async def create_nutrient_table(tableName: str, nutrientFeedAmount:int, nutrientABGapTime:int, phDownFeedAmount:int):
+    return nutrientManager.CreateTable(tableName,nutrientFeedAmount,nutrientABGapTime,phDownFeedAmount)
 
 @app.get("/nutrient/data/{nutrientTableID}")
 async def get_nutrient_table(nutrientTableID: int):
     return nutrientManager.GetTable(nutrientTableID)
+
+@app.delete("/nutrient/data/{nutrientTableID}")
+async def remove_nutrient_table(nutrientTableID: int):
+    return nutrientManager.RemoveTable(nutrientTableID)
 
 @app.post("/nutrient/data/{nutrientTableID}/row")
 async def append_nutrient_row(nutrientTableID: int, newNutrientRow: Nutrient.NutrientRow):

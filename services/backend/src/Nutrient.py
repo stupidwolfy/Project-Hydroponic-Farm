@@ -4,7 +4,7 @@ from typing import List, Tuple, Callable
 from pydantic import BaseModel
 from datetime import date
 import sched
-
+import asyncio
 
 class Repeatable:
     # To make some methode run repeatly
@@ -24,6 +24,9 @@ class NutrientRow(BaseModel):
 class NutrientTable(BaseModel):
     id: int
     name: str
+    nutrientFeedAmount: int
+    nutrientABGapTime: int
+    phDownFeedAmount: int
     nutrientRows: List[NutrientRow]
 
 
@@ -47,10 +50,10 @@ class NutrientManager(Repeatable):
             nutrientTables = []
             exampleRow = NutrientRow(minEC=2, maxPH=8)
             exampleTable = NutrientTable(
-                id=len(nutrientTables), name="standard", nutrientRows=[exampleRow, exampleRow])
+                id=len(nutrientTables), name="standard",nutrientFeedAmount=5, nutrientABGapTime=15, phDownFeedAmount=5, nutrientRows=[exampleRow, exampleRow])
             nutrientTables.append(exampleTable)
             exampleTable2 = NutrientTable(
-                id=len(nutrientTables), name="standard2", nutrientRows=[exampleRow, exampleRow])
+                id=len(nutrientTables), name="standard2",nutrientFeedAmount=5, nutrientABGapTime=15, phDownFeedAmount=5, nutrientRows=[exampleRow, exampleRow])
             nutrientTables.append(exampleTable2)
             saveResult = FileManager.SaveObjAsJson(
                 "nutrientTables.json", nutrientTables)
@@ -68,21 +71,27 @@ class NutrientManager(Repeatable):
             return True
         return False
 
-    def CreateTable(self, tableName: str):
-        newNutrientTable = NutrientTable(id=len(self.nutrientTables), name=tableName, nutrientRows=[])
+    def CreateTable(self, tableName: str, nutrientFeedAmount:int, nutrientABGapTime:int, phDownFeedAmount:int):
+        newNutrientTable = NutrientTable(id=len(self.nutrientTables), name=tableName, nutrientFeedAmount=nutrientFeedAmount, nutrientABGapTime=nutrientABGapTime, phDownFeedAmount=phDownFeedAmount, nutrientRows=[])
         self.nutrientTables.append(newNutrientTable)
         saveResult = FileManager.SaveObjAsJson(
                 "nutrientTables.json", self.nutrientTables)
-        return newNutrientTable
+        return saveResult
+
+    def RemoveTable(self, tableID: int):
+        if tableID >= 0 and tableID < len(self.nutrientTables):
+            del self.nutrientTables[tableID]
+            return True
+        return False
 
     def GetTable(self, tableID: int = None) -> NutrientTable:
         if tableID is None:
             return ({"id": i.id, "name":i.name} for i in self.nutrientTables)
-        if tableID >= 0 and tableID <= len(self.nutrientTables):
+        if tableID >= 0 and tableID < len(self.nutrientTables):
             return self.nutrientTables[tableID]
 
     def AddTableRow(self, tableID: int, newRow: NutrientRow):
-        if tableID >= 0 and tableID <= len(self.nutrientTables):
+        if tableID >= 0 and tableID < len(self.nutrientTables):
             self.nutrientTables[tableID].nutrientRows.append(newRow)
             saveResult = FileManager.SaveObjAsJson(
                 "nutrientTables.json", self.nutrientTables)
@@ -91,8 +100,8 @@ class NutrientManager(Repeatable):
         return False
 
     def EditTableRow(self, tableID: int, tableRow: int, newRow: NutrientRow):
-        if tableID >= 0 and tableID <= len(self.nutrientTables):
-            if tableRow >= 0 and tableRow <= len(self.nutrientTables[tableID].nutrientRows):
+        if tableID >= 0 and tableID < len(self.nutrientTables):
+            if tableRow >= 0 and tableRow < len(self.nutrientTables[tableID].nutrientRows):
                 self.nutrientTables[tableID].nutrientRows[tableRow] = newRow
                 saveResult = FileManager.SaveObjAsJson(
                     "nutrientTables.json", self.nutrientTables)
@@ -101,8 +110,8 @@ class NutrientManager(Repeatable):
         return False
 
     def RemoveTableRow(self, tableID: int, tableRow: int):
-        if tableID >= 0 and tableID <= len(self.nutrientTables):
-            if tableRow >= 0 and tableRow <= len(self.nutrientTables[tableID].nutrientRows):
+        if tableID >= 0 and tableID < len(self.nutrientTables):
+            if tableRow >= 0 and tableRow < len(self.nutrientTables[tableID].nutrientRows):
                 del self.nutrientTables[tableID].nutrientRows[tableRow]
                 saveResult = FileManager.SaveObjAsJson(
                     "nutrientTables.json", self.nutrientTables)
@@ -110,16 +119,28 @@ class NutrientManager(Repeatable):
         
         return False
 
-    def AdjustNutrient(self, nutrientARelay: Output.Relay, nutrientBRelay: Output.Relay, PHDownRelay: Output.Relay, phSensor: Sensor.PHSensor, tdsSensor: Sensor.TDSSensor):
+    async def AdjustNutrient(self, nutrientARelay: Output.Relay, nutrientBRelay: Output.Relay, PHDownRelay: Output.Relay, phSensor: Sensor.PHSensor, tdsSensor: Sensor.TDSSensor):
         activeTable = self.nutrientTables[self.activeTableID]
-        currentDate = date.today() - self.startDate
-        ph = phSensor.GetPH()
-        ec = tdsSensor.GetPPM()
+        dayGap = date.today() - self.startDate
+        #if current day still within day in table
+        if dayGap.days <= len(activeTable.nutrientRows):
+            ph = phSensor.GetPH()
+            ec = tdsSensor.GetPPM()
+            if ph is -1 or ec is None:
+                return
+            
+            #fix ph too high
+            if ph > activeTable.nutrientRows[dayGap].maxPH:
+                PHDownRelay.OnRate(activeTable.phDownFeedAmount)
 
-        if ph is -1 or ec is None:
-            return
-
-        #if ph > activeTable 
+            #fix ec too low
+            if ec < activeTable.nutrientRows[dayGap].minEC:
+                #add nutrientA
+                await nutrientARelay.OnRate(activeTable.nutrientFeedAmount)
+                #wait few hour
+                await asyncio.sleep(nutrientABGapTime)
+                #add nutrientB
+                await nutrientBRelay.OnRate(activeTable.nutrientFeedAmount)
 
     def AutoAdjustNutrient(self, scheduler: sched.scheduler, args: Tuple):
         return super().PeriodicTask(self.AdjustNutrient, self.adjustNutrientInterval, scheduler, args)
