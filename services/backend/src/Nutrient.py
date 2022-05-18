@@ -58,13 +58,32 @@ class NutrientManager(Repeatable):
 
         self.nutrientTables = nutrientTables
 
+    def getActiveTableID(self):
+        return self.activeTableID
+
     def ChangeActiveTable(self, activeTableID: int):
-        self.activeTableID = activeTableID
-        self.Setup()
+        if activeTableID >= 0 and activeTableID <= len(self.nutrientTables): 
+            self.activeTableID = activeTableID
+            self.Setup()
+            return True
+        return False
+
+    def CreateTable(self, tableName: str):
+        newNutrientTable = NutrientTable(id=len(self.nutrientTables), name=tableName, nutrientRows=[])
+        self.nutrientTables.append(newNutrientTable)
+        saveResult = FileManager.SaveObjAsJson(
+                "nutrientTables.json", self.nutrientTables)
+        return newNutrientTable
+
+    def GetTable(self, tableID: int = None) -> NutrientTable:
+        if tableID is None:
+            return ({"id": i.id, "name":i.name} for i in self.nutrientTables)
+        if tableID >= 0 and tableID <= len(self.nutrientTables):
+            return self.nutrientTables[tableID]
 
     def AddTableRow(self, tableID: int, newRow: NutrientRow):
         if tableID >= 0 and tableID <= len(self.nutrientTables):
-            self.nutrientTables[tableID].append(newRow)
+            self.nutrientTables[tableID].nutrientRows.append(newRow)
             saveResult = FileManager.SaveObjAsJson(
                 "nutrientTables.json", self.nutrientTables)
             return saveResult
@@ -73,8 +92,8 @@ class NutrientManager(Repeatable):
 
     def EditTableRow(self, tableID: int, tableRow: int, newRow: NutrientRow):
         if tableID >= 0 and tableID <= len(self.nutrientTables):
-            if tableRow >= 0 and tableRow <= len(self.nutrientTables[tableID]):
-                self.nutrientTables[tableID][tableRow] = newRow
+            if tableRow >= 0 and tableRow <= len(self.nutrientTables[tableID].nutrientRows):
+                self.nutrientTables[tableID].nutrientRows[tableRow] = newRow
                 saveResult = FileManager.SaveObjAsJson(
                     "nutrientTables.json", self.nutrientTables)
                 return saveResult
@@ -83,8 +102,8 @@ class NutrientManager(Repeatable):
 
     def RemoveTableRow(self, tableID: int, tableRow: int):
         if tableID >= 0 and tableID <= len(self.nutrientTables):
-            if tableRow >= 0 and tableRow <= len(self.nutrientTables[tableID]):
-                del self.nutrientTables[tableID][tableRow]
+            if tableRow >= 0 and tableRow <= len(self.nutrientTables[tableID].nutrientRows):
+                del self.nutrientTables[tableID].nutrientRows[tableRow]
                 saveResult = FileManager.SaveObjAsJson(
                     "nutrientTables.json", self.nutrientTables)
                 return saveResult
@@ -92,7 +111,7 @@ class NutrientManager(Repeatable):
         return False
 
     def AdjustNutrient(self, nutrientARelay: Output.Relay, nutrientBRelay: Output.Relay, PHDownRelay: Output.Relay, phSensor: Sensor.PHSensor, tdsSensor: Sensor.TDSSensor):
-        activeTable = self.nutrientTables[0]
+        activeTable = self.nutrientTables[self.activeTableID]
         currentDate = date.today() - self.startDate
         ph = phSensor.GetPH()
         ec = tdsSensor.GetPPM()

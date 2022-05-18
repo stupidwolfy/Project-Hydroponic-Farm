@@ -106,7 +106,7 @@ if nutrientManager is None:
     nutrientManager = Nutrient.NutrientManager(0)
 
     saveResult = FileManager.SaveObjAsJson(
-        "nutrientTables.json", nutrientManager)
+        "nutrientManager.json", nutrientManager)
     print(f"NutrientManager created: {saveResult}")
 
 else:
@@ -299,7 +299,38 @@ async def get_tds(getVoltage: bool = None):
     else:
         return {"voltage": devices['sensor']['tds'].getVoltage()}
 
+@app.get("/nutrient/data")
+async def get_nutrient_tables():
+    return nutrientManager.GetTable()
 
+@app.post("/nutrient/data")
+async def create_nutrient_table(tableName: str):
+    return nutrientManager.CreateTable(tableName)
+
+@app.get("/nutrient/data/{nutrientTableID}")
+async def get_nutrient_table(nutrientTableID: int):
+    return nutrientManager.GetTable(nutrientTableID)
+
+@app.post("/nutrient/data/{nutrientTableID}/row")
+async def append_nutrient_row(nutrientTableID: int, newNutrientRow: Nutrient.NutrientRow):
+    return nutrientManager.AddTableRow(nutrientTableID, newNutrientRow)
+
+@app.put("/nutrient/data/{nutrientTableID}/row")
+async def edit_nutrient_row(nutrientTableID: int, row:int, newNutrientRow: Nutrient.NutrientRow):
+    return nutrientManager.EditTableRow(nutrientTableID, row, newNutrientRow)
+
+@app.delete("/nutrient/data/{nutrientTableID}/row")
+async def remove_nutrient_row(nutrientTableID: int, row: int):
+    return nutrientManager.RemoveTableRow(nutrientTableID, row)
+
+@app.get("/nutrient/manage")
+async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: bool = None):
+    if newActiveTable is not None:
+        return {"result ": nutrientManager.ChangeActiveTable(newActiveTable)}
+
+    if getActiveTableID:
+        return {"id": nutrientManager.getActiveTableID()}
+    
 @app.get("/cam")
 async def get_image():
     live_img = CamHandler.GetImage(180)
@@ -338,47 +369,46 @@ async def cloud_setup(verified: bool = None) -> dict:
             saveResult = FileManager.SaveObjAsJson("apis.json", apis)
         return {"result": verifyCompleated}
 
+
 # Websocket test
-
-
-@app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    data = await websocket.receive_text()
-    await websocket.send_json({"got": data})
-    if data == "temp":
-        try:
-            while True:
-                await websocket.send_json({"temp": devices['sensor']['sht31'].Get_temp()})
-                await asyncio.sleep(5)
-        except IndexError:
-            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
-
-    elif data == "humid":
-        try:
-            while True:
-                await websocket.send_json({"humid": devices['sensor']['sht31'].Get_Humid()})
-                await asyncio.sleep(5)
-        except IndexError:
-            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
-
-    elif data == "ph":
-        try:
-            while True:
-                await websocket.send_json({"ph": devices['sensor']['ph'].GetPH()})
-                await asyncio.sleep(1)
-        except IndexError:
-            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
-
-    elif data == "tds":
-        try:
-            while True:
-                tds = devices['sensor']['tds'].GetPPM(
-                    devices['sensor']['water-temp'].GetTemp())
-                ec = (tds * 2)
-                await websocket.send_json({"tds": tds, "unit-tds": "ppm", "ec": ec, "unit-ec": "uS/cm"})
-                await asyncio.sleep(1)
-        except IndexError:
-            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
-    else:
-        await websocket.send_json({"status": "Error", "detail": "No data."})
+#@app.websocket("/ws")
+#async def websocket_endpoint(websocket: WebSocket):
+#    await websocket.accept()
+#    data = await websocket.receive_text()
+#    await websocket.send_json({"got": data})
+#    if data == "temp":
+#        try:
+#            while True:
+#                await websocket.send_json({"temp": devices['sensor']['sht31'].Get_temp()})
+#                await asyncio.sleep(5)
+#        except IndexError:
+#            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+#
+#    elif data == "humid":
+#        try:
+#            while True:
+#                await websocket.send_json({"humid": devices['sensor']['sht31'].Get_Humid()})
+#                await asyncio.sleep(5)
+#        except IndexError:
+#            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+#
+#    elif data == "ph":
+#        try:
+#            while True:
+#                await websocket.send_json({"ph": devices['sensor']['ph'].GetPH()})
+#                await asyncio.sleep(1)
+#        except IndexError:
+#            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+#
+#    elif data == "tds":
+#        try:
+#            while True:
+#                tds = devices['sensor']['tds'].GetPPM(
+#                    devices['sensor']['water-temp'].GetTemp())
+#                ec = (tds * 2)
+#                await websocket.send_json({"tds": tds, "unit-tds": "ppm", "ec": ec, "unit-ec": "uS/cm"})
+#                await asyncio.sleep(1)
+#        except IndexError:
+#            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+#    else:
+#        await websocket.send_json({"status": "Error", "detail": "No data."})
