@@ -48,12 +48,15 @@
                   aria-valuemax="100"
                   aria-valuemin="0"
                   aria-valuenow="25"
-                  class="progress-bar bg-primary"
+                  :class="[
+                    'progress-bar',
+                    humidity > 70 ? 'bg-warning ' : 'bg-primary',
+                  ]"
                   role="progressbar"
                   v-bind:style="'width:' + humidity + '%'"
                 ></div>
               </div>
-              <mdb-card-text>Better than last week (25%)</mdb-card-text>
+              <mdb-card-text>Max Humidity 100</mdb-card-text>
             </mdb-card-body>
           </mdb-card>
         </mdb-col>
@@ -76,10 +79,10 @@
                   aria-valuenow="25"
                   class="progress-bar bg-primary"
                   role="progressbar"
-                  style="width: 50%"
+                  v-bind:style="'width:' + ec%100 + '%'"
                 ></div>
               </div>
-              <mdb-card-text>Better than last week (25%)</mdb-card-text>
+              <mdb-card-text>EC form Nutrient</mdb-card-text>
             </mdb-card-body>
           </mdb-card>
         </mdb-col>
@@ -105,10 +108,10 @@
                     pHRealtime > 6 ? 'bg-warning ' : 'bg-primary',
                   ]"
                   role="progressbar"
-                  v-bind:style="'width:' + pHRealtime + '%'"
+                  v-bind:style="'width:' + pHRealtime*7.143 + '%'"
                 ></div>
               </div>
-              <mdb-card-text>Better than last week (25%)</mdb-card-text>
+              <mdb-card-text>Max pH 14</mdb-card-text>
             </mdb-card-body>
           </mdb-card>
         </mdb-col>
@@ -177,7 +180,7 @@
         src="http://raspberrypi.local:5000/cam"
         alt="thumbnail 1"
         class="img-thumbnail img-fluid z-depth-1"
-        style="width: 1020px"
+        style="width: 965px"
       />
     </section>
   </section>
