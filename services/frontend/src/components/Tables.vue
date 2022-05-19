@@ -38,7 +38,7 @@
 
           <mdb-row>
             <mdb-col col="3" style="margin-top: 10px"
-              ><mdb-btn block color="amber" @click="editTable0(number_Day-1)" style="margin-left: 10px"
+              ><mdb-btn block color="amber" @click="editTable0(number_Day-1), getTable()" style="margin-left: 10px"
                 ><mdb-icon class="mr-1" icon="pen" />Edit Day</mdb-btn
               ></mdb-col
             >
@@ -159,7 +159,6 @@ export default {
             },
           }
         )
-        .then(this.getTable());
     },
     deleteTableRow0(row) {
       axios.delete(`/nutrient/data/0/row?row=${row}`).then(this.getTable());
