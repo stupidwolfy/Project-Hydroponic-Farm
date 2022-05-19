@@ -351,8 +351,8 @@ async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: 
         return nutrientManager.SetStartDate(newStartDate)
     
 @app.get("/cam")
-async def get_image():
-    live_img = CamHandler.GetImage(180)
+async def get_image(rotate:int = None):
+    live_img = CamHandler.GetImage(rotate)
     if live_img is None:
         return {"status": "Error", "detail": "Device not found."}
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
