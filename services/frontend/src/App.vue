@@ -27,7 +27,7 @@
     <!-- Sidebar -->
     <div class="sidebar-fixed position-fixed">
       <a class="logo-wrapper"
-        ><img alt="" class="img-fluid" src="./assets/logo-mdb-vue-small.png"
+        ><img alt="" class="img-fluid" src="./assets/it-logo.png"
       /></a>
       <mdb-list-group class="list-group-flush">
         <router-link to="/dashboard" @click.native="activeItem = 1">
@@ -53,7 +53,7 @@
           <mdb-list-group-item
             :action="true"
             :class="activeItem === 2 && 'active'"
-            ><mdb-icon icon="user" class="mr-3" />Could</mdb-list-group-item
+            ><mdb-icon icon="user" class="mr-3" />Cloud</mdb-list-group-item
           >
         </router-link>
       </mdb-list-group>
@@ -64,36 +64,9 @@
         <router-view></router-view>
       </div>
       <ftr color="primary-color-dark" class="text-center font-small darken-2">
-        <div class="pt-4">
-          <mdb-btn
-            outline="white"
-            tag="a"
-            href="https://mdbootstrap.com/docs/vue/getting-started/download/"
-            target="_blank"
-            >Download MDB <mdb-icon icon="download" class="ml-2"
-          /></mdb-btn>
-          <mdb-btn
-            outline="white"
-            tag="a"
-            href="https://mdbootstrap.com/education/bootstrap/"
-            target="_blank"
-            >Start free tutorial <mdb-icon icon="graduation-cap" class="ml-2"
-          /></mdb-btn>
-        </div>
-        <hr class="my4" />
-        <div class="pb-4">
-          <a href="#"><mdb-icon fab icon="facebook-square" class="mr-3"/></a>
-          <a href="#"><mdb-icon fab icon="twitter" class="mr-3"/></a>
-          <a href="#"><mdb-icon fab icon="youtube" class="mr-3"/></a>
-          <a href="#"><mdb-icon fab icon="google-plus" class="mr-3"/></a>
-          <a href="#"><mdb-icon fab icon="dribbble" class="mr-3"/></a>
-          <a href="#"><mdb-icon fab icon="pinterest" class="mr-3"/></a>
-          <a href="#"><mdb-icon fab icon="github" class="mr-3"/></a>
-          <a href="#"><mdb-icon fab icon="codepen" class="mr-3"/></a>
-        </div>
+
         <p class="footer-copyright mb-0 py-3 text-center">
-          &copy; {{ new Date().getFullYear() }} Copyright:
-          <a href="https://mdbootstrap.com/docs/vue/"> MDBootstrap.com </a>
+          <a> AUTOMATIC HYDROPONIC VEGETABLE MANAGEMENT SYSTEM </a>
         </p>
       </ftr>
     </main>
@@ -107,7 +80,6 @@ import {
   mdbNavItem,
   mdbNavbarNav,
   mdbNavbarToggler,
-  mdbBtn,
   mdbIcon,
   mdbListGroup,
   mdbListGroupItem,
@@ -123,7 +95,7 @@ export default {
     mdbNavItem,
     mdbNavbarNav,
     mdbNavbarToggler,
-    mdbBtn,
+
     mdbListGroup,
     mdbListGroupItem,
     mdbIcon,
