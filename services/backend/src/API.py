@@ -4,6 +4,8 @@ import time
 import json
 import base64
 import sched
+import tempfile
+
 from typing import Callable, Tuple, List, Optional
 from firebase import Firebase
 
@@ -157,6 +159,21 @@ class FirebaseHandler(Repeatable):
                 print(f"INFO:   Sended to cloud, {data_name}: {data}")
                 results = self.db.child(
                     f"users/{self.localId}/device").update({data_name: data}, self.user['idToken'])
+                return results
+
+    def SendtoStorage(self, fileName: str, file):
+        if file is not None:
+            if self.isActivated:
+                print(f"INFO:   Sended to storage, {fileName}")
+                with tempfile.NamedTemporaryFile(suffix='.jpg') as fp:
+                    fp.write(file)
+                    results = self.storage.child(
+                        f"user/{self.localId}").put(fp.name, self.user['idToken'])
+                return results
+
 
     def AutoSendToDB(self, scheduler: sched.scheduler, args: Tuple):
         return super().PeriodicTask(self.SendtoDB, self.sendToDBInterval, scheduler, args)
+
+    def AutoSendtoStorage(self, scheduler: sched.scheduler, args: Tuple):
+        return super().PeriodicTask(self.SendtoStorage, 60, scheduler, args)

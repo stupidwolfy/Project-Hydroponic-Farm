@@ -154,6 +154,8 @@ def Background_DBAutoSave():
     #    relay.AutoSaveToDB(scheduler, (dbThread,))
     #    apis['cloud'].AutoSendToDB(scheduler, (f"relay-{i}", relay.getState()))
 
+    apis['cloud'].AutoSendtoStorage(scheduler, ("camera.jpg", CamHandler.GetImage()))
+
     nutrientManager.AutoAdjustNutrient(scheduler, (devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds'], devices['sensor']['water-temp']))
 
     # scheduler.run()
@@ -356,10 +358,14 @@ async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: 
         return await nutrientManager.AdjustNutrient(devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds'], devices['sensor']['water-temp'])
     
 @app.get("/cam")
-async def get_image(rotate:int = None):
+async def get_image(rotate:int = None, forceSendToCloud:bool = None):
     live_img = CamHandler.GetImage(rotate)
     if live_img is None:
         return {"status": "Error", "detail": "Device not found."}
+    
+    if forceSendToCloud is not None:
+        apis['cloud'].SendtoStorage("camera.jpg", CamHandler.GetImage())
+        return {"status": "ok"}
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
 
 
