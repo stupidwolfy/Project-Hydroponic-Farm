@@ -154,6 +154,7 @@ class FirebaseHandler(Repeatable):
     def SendtoDB(self, data_name: str, data):
         if data is not None:
             if self.isActivated:
+                print(f"INFO:   Sended to cloud, {data_name}: {data}")
                 results = self.db.child(
                     f"users/{self.localId}/device").update({data_name: data}, self.user['idToken'])
 

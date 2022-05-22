@@ -128,8 +128,8 @@ def Background_DBAutoSave():
 
     if 'switchs' in devices['sensor']:
         devices['sensor']['switchs'].AutoSaveToDB(scheduler, (dbThread,))
-        apis['cloud'].AutoSendToDB(
-            scheduler, ("switchs", devices['sensor']['switchs'].getState()))
+        #apis['cloud'].AutoSendToDB(
+        #    scheduler, ("switchs", devices['sensor']['switchs'].getState()))
     if 'sht31' in devices['sensor']:
         devices['sensor']['sht31'].AutoSaveToDB(scheduler, (dbThread,))
         apis['cloud'].AutoSendToDB(
@@ -142,8 +142,8 @@ def Background_DBAutoSave():
             scheduler, ("ph", devices['sensor']['ph'].GetPH()))
     if 'water-temp' in devices['sensor']:
         devices['sensor']['water-temp'].AutoSaveToDB(scheduler, (dbThread,))
-        apis['cloud'].AutoSendToDB(
-            scheduler, ("water-temp", devices['sensor']['water-temp'].GetTemp()))
+        #apis['cloud'].AutoSendToDB(
+        #    scheduler, ("water-temp", devices['sensor']['water-temp'].GetTemp()))
     if 'tds' in devices['sensor']:
         devices['sensor']['tds'].AutoSaveToDB(
             scheduler, (dbThread, devices['sensor']['water-temp']))
@@ -230,17 +230,19 @@ async def relay_control(number: int, power: bool):
         # Pumps code
         if power:
             devices['relays'][number].ON()
+            apis['cloud'].SendtoDB(f"relay-{number}", 1)
         else:
             devices['relays'][number].OFF()
+            apis['cloud'].SendtoDB(f"relay-{number}", 0)
         return {devices['relays'][number].name: power}
     except IndexError:
         return {"status": "Error", "detail": "Device not found."}
 
 
 @app.get("/relay/on_by_rate/{number}/{amount}")
-async def relay_control(number: int, amount: int):
+async def relay_control_by_amount(number: int, amount: int):
     try:
-        await devices['relays'][number].OnRate(amount)
+        await devices['relays'][number].OnRate(amount, apis['cloud'], number)
         return {devices['relays'][number].name: amount}
     except IndexError:
         return {"status": "Error", "detail": "Device not found."}
