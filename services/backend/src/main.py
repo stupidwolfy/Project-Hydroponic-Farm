@@ -150,9 +150,9 @@ def Background_DBAutoSave():
         apis['cloud'].AutoSendToDB(
             scheduler, ("tds", devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp())))
 
-    for i, relay in enumerate(devices['relays']):
-        relay.AutoSaveToDB(scheduler, (dbThread,))
-        apis['cloud'].AutoSendToDB(scheduler, (f"relay-{i}", relay.getState()))
+    #for i, relay in enumerate(devices['relays']):
+    #    relay.AutoSaveToDB(scheduler, (dbThread,))
+    #    apis['cloud'].AutoSendToDB(scheduler, (f"relay-{i}", relay.getState()))
 
     nutrientManager.AutoAdjustNutrient(scheduler, (devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds'], devices['sensor']['water-temp']))
 
@@ -230,10 +230,10 @@ async def relay_control(number: int, power: bool):
         # Pumps code
         if power:
             devices['relays'][number].ON()
-            apis['cloud'].SendtoDB(f"relay-{number}", 1)
+            apis['cloud'].SendtoDB(f"relay-{number}", True)
         else:
             devices['relays'][number].OFF()
-            apis['cloud'].SendtoDB(f"relay-{number}", 0)
+            apis['cloud'].SendtoDB(f"relay-{number}", False)
         return {devices['relays'][number].name: power}
     except IndexError:
         return {"status": "Error", "detail": "Device not found."}
