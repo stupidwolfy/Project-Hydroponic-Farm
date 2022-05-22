@@ -154,7 +154,7 @@ def Background_DBAutoSave():
         relay.AutoSaveToDB(scheduler, (dbThread,))
         apis['cloud'].AutoSendToDB(scheduler, (f"relay-{i}", relay.getState()))
 
-    nutrientManager.AutoAdjustNutrient(scheduler, (devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds']))
+    nutrientManager.AutoAdjustNutrient(scheduler, (devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds'], devices['sensor']['water-temp']))
 
     # scheduler.run()
 
@@ -331,7 +331,7 @@ async def remove_nutrient_row(nutrientTableID: int, row: int):
     return nutrientManager.RemoveTableRow(nutrientTableID, row)
 
 @app.get("/nutrient/manage")
-async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: bool = None, getActivation: bool = None, setActivation: bool = None, getStartDate: bool = None, newStartDate: date = None):
+async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: bool = None, getActivation: bool = None, setActivation: bool = None, getStartDate: bool = None, newStartDate: date = None, forceAdjustNutrient: bool = None):
     if newActiveTable is not None:
         return {"result ": nutrientManager.ChangeActiveTable(newActiveTable)}
 
@@ -349,6 +349,9 @@ async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: 
     
     if newStartDate is not None:
         return nutrientManager.SetStartDate(newStartDate)
+
+    if forceAdjustNutrient is not None:
+        return await nutrientManager.AdjustNutrient(devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds'], devices['sensor']['water-temp'])
     
 @app.get("/cam")
 async def get_image(rotate:int = None):

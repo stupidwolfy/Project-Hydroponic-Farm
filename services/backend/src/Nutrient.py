@@ -51,10 +51,10 @@ class NutrientManager(Repeatable):
             nutrientTables = []
             exampleRow = NutrientRow(minEC=2, maxPH=8)
             exampleTable = NutrientTable(
-                id=len(nutrientTables), name="standard",nutrientFeedAmount=5, nutrientABGapTime=15, phDownFeedAmount=5, nutrientRows=[exampleRow, exampleRow])
+                id=len(nutrientTables), name="standard",nutrientFeedAmount=5, nutrientABGapTime=120, phDownFeedAmount=5, nutrientRows=[exampleRow, exampleRow])
             nutrientTables.append(exampleTable)
             exampleTable2 = NutrientTable(
-                id=len(nutrientTables), name="standard2",nutrientFeedAmount=5, nutrientABGapTime=15, phDownFeedAmount=5, nutrientRows=[exampleRow, exampleRow])
+                id=len(nutrientTables), name="standard2",nutrientFeedAmount=5, nutrientABGapTime=120, phDownFeedAmount=5, nutrientRows=[exampleRow, exampleRow])
             nutrientTables.append(exampleTable2)
             saveResult = FileManager.SaveObjAsJson(
                 "nutrientTables.json", nutrientTables)
@@ -134,27 +134,31 @@ class NutrientManager(Repeatable):
         self.startDate(newDate)
         return True
 
-    async def AdjustNutrient(self, nutrientARelay: Output.Relay, nutrientBRelay: Output.Relay, PHDownRelay: Output.Relay, phSensor: Sensor.PHSensor, tdsSensor: Sensor.TDSSensor):
+    async def AdjustNutrient(self, nutrientARelay: Output.Relay, nutrientBRelay: Output.Relay, PHDownRelay: Output.Relay, phSensor: Sensor.PHSensor, tdsSensor: Sensor.TDSSensor, waterTempSensor: Sensor.TempSensor):
+        print("INFO:    Adjusting Nutrient in progress..")
         if self.activate:
             activeTable = self.nutrientTables[self.activeTableID]
-            dayGap = date.today() - self.startDate
+            dayGap = (date.today() - self.startDate).days
             #if current day still within day in table
-            if dayGap.days <= len(activeTable.nutrientRows):
+            if dayGap <= len(activeTable.nutrientRows):
                 ph = phSensor.GetPH()
-                ec = tdsSensor.GetPPM()
+                ec = tdsSensor.GetPPM(waterTempSensor.GetTemp())
                 if ph is -1 or ec is None:
+                    print("INFO:    Nutrient Sensor read fail.")
                     return
                 
                 #fix ph too high
                 if ph > activeTable.nutrientRows[dayGap].maxPH:
+                    print("INFO:    Adjusting PH")
                     PHDownRelay.OnRate(activeTable.phDownFeedAmount)
     
                 #fix ec too low
                 if ec < activeTable.nutrientRows[dayGap].minEC:
+                    print("INFO:    Adjusting EC")
                     #add nutrientA
                     await nutrientARelay.OnRate(activeTable.nutrientFeedAmount)
                     #wait few hour
-                    await asyncio.sleep(nutrientABGapTime)
+                    await asyncio.sleep(activeTable.nutrientABGapTime)
                     #add nutrientB
                     await nutrientBRelay.OnRate(activeTable.nutrientFeedAmount)
 
