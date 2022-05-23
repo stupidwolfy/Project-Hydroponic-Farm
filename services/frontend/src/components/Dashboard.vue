@@ -151,25 +151,35 @@
               color="primary"
               size="sm"
               @click="getRelayByAmout(0, amoutML)"
-              >Bottom 0</mdb-btn
+              >Nutrient A</mdb-btn
             >
             <mdb-btn
               color="primary"
               size="sm"
               @click="getRelayByAmout(1, amoutML)"
-              >Bottom 1</mdb-btn
+              >Nutrient B</mdb-btn
             >
             <mdb-btn
               color="primary"
               size="sm"
               @click="getRelayByAmout(2, amoutML)"
-              >Bottom 2</mdb-btn
+              style="margin-bottom: 20px"
+              >pH Down</mdb-btn
             >
+            <span class="border-bottom border-light"></span>
             <mdb-btn
+              v-if="light_state == true"
               color="primary"
               size="sm"
-              @click="getRelayByAmout(3, amoutML)"
-              >Bottom 3</mdb-btn
+              @click="RelayControl(3, !light_state)"
+              >UV light On</mdb-btn
+            >
+            <mdb-btn
+              v-else
+              color="primary"
+              size="sm"
+              @click="RelayControl(3, !light_state)"
+              >UV light Off</mdb-btn
             >
           </mdb-card>
         </mdb-col>
@@ -270,6 +280,7 @@ export default {
       ec: "",
       number: "",
       amoutML: "",
+      light_state: "",
     };
   },
   methods: {
@@ -303,12 +314,13 @@ export default {
           console.log(error);
         });
     },
-    RelayControl(number) {
+    RelayControl(number, state) {
       console.log("Relays: " + this.isToggled);
       axios
-        .get(`/relay/${number}/${this.isToggled[number]}`)
-        .then(() => {
+        .get(`/relay/${number}/${state}`)
+        .then((res) => {
           //console.log(res.data);
+          this.light_state = res.data.status;
         })
         .catch((error) => {
           console.log(error);
@@ -320,6 +332,8 @@ export default {
           //this.isToggled[i] = res.data.Relays[i].isOn
           this.isToggled[i] = true;
         }
+
+        this.light_state = res.data.Relays[3].isON;
         console.log("Status: " + res.data.Relays[0].isOn);
       });
     },
