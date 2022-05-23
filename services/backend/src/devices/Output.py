@@ -65,14 +65,16 @@ class Relay(Repeatable):
                 GPIO.output(self.pin, 1)
 
     async def OnRate(self, amount, firebaseHandler:API.FirebaseHandler=None, number=None):
-        if firebaseHandler is not None:
-            firebaseHandler.SendtoDB(f"relay-{number}", True)
-        self.isON = True
-        self.ON()
-        await asyncio.sleep(amount/self.ratePerSec)
-        if firebaseHandler is not None:
-            firebaseHandler.SendtoDB(f"relay-{number}", False)
-        self.OFF()
+        if self.isON == False:
+            if firebaseHandler is not None:
+                firebaseHandler.SendtoDB(f"relay-{number}", True)
+            self.isON = True
+            self.ON()
+            await asyncio.sleep(amount/self.ratePerSec)
+            if firebaseHandler is not None:
+                firebaseHandler.SendtoDB(f"relay-{number}", False)
+            self.isON = False
+            self.OFF()
 
     def OFF(self):
         self.isON = False
