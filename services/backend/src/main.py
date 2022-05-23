@@ -236,7 +236,7 @@ async def relay_control(number: int, power: bool):
         else:
             devices['relays'][number].OFF()
             apis['cloud'].SendtoDB(f"relay-{number}", False)
-        return {devices['relays'][number].name: power}
+        return {"status": power}
     except IndexError:
         return {"status": "Error", "detail": "Device not found."}
 
