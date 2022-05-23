@@ -6,9 +6,9 @@
           <mdb-card cascade class="cascading-admin-card">
             <div class="admin-up">
               <div class="data">
-                <p>Temp</p>
+                <p>Temperature</p>
                 <h4>
-                  <strong>{{ temp }}</strong>
+                  <strong>{{ temp }} °C</strong>
                 </h4>
               </div>
             </div>
@@ -36,9 +36,9 @@
             <div class="admin-up">
               <!--<mdb-icon icon="money-bill-alt" far class="primary-color"/>-->
               <div class="data">
-                <p>humidity</p>
+                <p>Humidity</p>
                 <h4>
-                  <strong>{{ humidity }}</strong>
+                  <strong>{{ humidity }} %</strong>
                 </h4>
               </div>
             </div>
@@ -65,9 +65,9 @@
           <mdb-card cascade class="cascading-admin-card">
             <div class="admin-up">
               <div class="data">
-                <p>EC</p>
+                <p>Electronic Conductivity (EC)</p>
                 <h4>
-                  <strong>{{ ec }}</strong>
+                  <strong>{{ ec }} uS/cm</strong>
                 </h4>
               </div>
             </div>
@@ -91,7 +91,7 @@
           <mdb-card cascade class="cascading-admin-card">
             <div class="admin-up">
               <div class="data">
-                <p>pH</p>
+                <p>Potential of Hydrogen (PH)</p>
                 <h4>
                   <strong>{{ pHRealtime }}</strong>
                 </h4>
