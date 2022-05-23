@@ -128,8 +128,8 @@ def Background_DBAutoSave():
 
     if 'switchs' in devices['sensor']:
         devices['sensor']['switchs'].AutoSaveToDB(scheduler, (dbThread,))
-        apis['cloud'].AutoSendToDB(
-            scheduler, ("switchs", devices['sensor']['switchs'].getState()))
+        #apis['cloud'].AutoSendToDB(
+        #    scheduler, ("switchs", devices['sensor']['switchs'].getState()))
     if 'sht31' in devices['sensor']:
         devices['sensor']['sht31'].AutoSaveToDB(scheduler, (dbThread,))
         apis['cloud'].AutoSendToDB(
@@ -142,19 +142,21 @@ def Background_DBAutoSave():
             scheduler, ("ph", devices['sensor']['ph'].GetPH()))
     if 'water-temp' in devices['sensor']:
         devices['sensor']['water-temp'].AutoSaveToDB(scheduler, (dbThread,))
-        apis['cloud'].AutoSendToDB(
-            scheduler, ("water-temp", devices['sensor']['water-temp'].GetTemp()))
+        #apis['cloud'].AutoSendToDB(
+        #    scheduler, ("water-temp", devices['sensor']['water-temp'].GetTemp()))
     if 'tds' in devices['sensor']:
         devices['sensor']['tds'].AutoSaveToDB(
             scheduler, (dbThread, devices['sensor']['water-temp']))
         apis['cloud'].AutoSendToDB(
             scheduler, ("tds", devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp())))
 
-    for i, relay in enumerate(devices['relays']):
-        relay.AutoSaveToDB(scheduler, (dbThread,))
-        apis['cloud'].AutoSendToDB(scheduler, (f"relay-{i}", relay.getState()))
+    #for i, relay in enumerate(devices['relays']):
+    #    relay.AutoSaveToDB(scheduler, (dbThread,))
+    #    apis['cloud'].AutoSendToDB(scheduler, (f"relay-{i}", relay.getState()))
 
-    nutrientManager.AutoAdjustNutrient(scheduler, (devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds']))
+    apis['cloud'].AutoSendtoStorage(scheduler, ("camera.jpg", CamHandler.GetImage()))
+
+    nutrientManager.AutoAdjustNutrient(scheduler, (devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds'], devices['sensor']['water-temp']))
 
     # scheduler.run()
 
@@ -230,17 +232,19 @@ async def relay_control(number: int, power: bool):
         # Pumps code
         if power:
             devices['relays'][number].ON()
+            apis['cloud'].SendtoDB(f"relay-{number}", True)
         else:
             devices['relays'][number].OFF()
+            apis['cloud'].SendtoDB(f"relay-{number}", False)
         return {devices['relays'][number].name: power}
     except IndexError:
         return {"status": "Error", "detail": "Device not found."}
 
 
 @app.get("/relay/on_by_rate/{number}/{amount}")
-async def relay_control(number: int, amount: int):
+async def relay_control_by_amount(number: int, amount: int):
     try:
-        await devices['relays'][number].OnRate(amount)
+        await devices['relays'][number].OnRate(amount, apis['cloud'], number)
         return {devices['relays'][number].name: amount}
     except IndexError:
         return {"status": "Error", "detail": "Device not found."}
@@ -331,7 +335,7 @@ async def remove_nutrient_row(nutrientTableID: int, row: int):
     return nutrientManager.RemoveTableRow(nutrientTableID, row)
 
 @app.get("/nutrient/manage")
-async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: bool = None, getActivation: bool = None, setActivation: bool = None, getStartDate: bool = None, newStartDate: date = None):
+async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: bool = None, getActivation: bool = None, setActivation: bool = None, getStartDate: bool = None, newStartDate: date = None, forceAdjustNutrient: bool = None):
     if newActiveTable is not None:
         return {"result ": nutrientManager.ChangeActiveTable(newActiveTable)}
 
@@ -349,12 +353,19 @@ async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: 
     
     if newStartDate is not None:
         return nutrientManager.SetStartDate(newStartDate)
+
+    if forceAdjustNutrient is not None:
+        return await nutrientManager.AdjustNutrient(devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds'], devices['sensor']['water-temp'])
     
 @app.get("/cam")
-async def get_image(rotate:int = None):
+async def get_image(rotate:int = None, forceSendToCloud:bool = None):
     live_img = CamHandler.GetImage(rotate)
     if live_img is None:
         return {"status": "Error", "detail": "Device not found."}
+    
+    if forceSendToCloud is not None:
+        apis['cloud'].SendtoStorage("camera.jpg", CamHandler.GetImage())
+        return {"status": "ok"}
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
 
 

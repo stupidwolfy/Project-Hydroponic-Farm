@@ -4,7 +4,7 @@ import RPi.GPIO as GPIO
 import random
 from typing import AnyStr, Callable, Tuple, Optional
 import sched
-from src import DBManager
+from src import DBManager, API
 from pydantic import BaseModel
 import asyncio
 
@@ -64,11 +64,17 @@ class Relay(Repeatable):
             else:
                 GPIO.output(self.pin, 1)
 
-    async def OnRate(self, amount):
-        self.isON = True
-        self.ON()
-        await asyncio.sleep(amount/self.ratePerSec)
-        self.OFF()
+    async def OnRate(self, amount, firebaseHandler:API.FirebaseHandler=None, number=None):
+        if self.isON == False:
+            if firebaseHandler is not None:
+                firebaseHandler.SendtoDB(f"relay-{number}", True)
+            self.isON = True
+            self.ON()
+            await asyncio.sleep(amount/self.ratePerSec)
+            if firebaseHandler is not None:
+                firebaseHandler.SendtoDB(f"relay-{number}", False)
+            self.isON = False
+            self.OFF()
 
     def OFF(self):
         self.isON = False
