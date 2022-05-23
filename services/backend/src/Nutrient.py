@@ -39,7 +39,7 @@ class NutrientManager(Repeatable):
 
         self.activeTableID = activeTableID
         self.adjustNutrientInterval = adjustNutrientInterval
-        self.activate = False
+        self.activate = True
 
         self.Setup()
 
