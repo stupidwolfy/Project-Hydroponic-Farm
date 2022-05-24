@@ -6,6 +6,7 @@ from datetime import date
 import sched
 import asyncio
 
+
 class Repeatable:
     # To make some methode run repeatly
     # For performance safety, change interval to 1min (X60sec) instead of 1sec
@@ -51,10 +52,10 @@ class NutrientManager(Repeatable):
             nutrientTables = []
             exampleRow = NutrientRow(minEC=2, maxPH=8)
             exampleTable = NutrientTable(
-                id=len(nutrientTables), name="standard",nutrientFeedAmount=5, nutrientABGapTime=120, phDownFeedAmount=5, nutrientRows=[exampleRow, exampleRow])
+                id=len(nutrientTables), name="standard", nutrientFeedAmount=5, nutrientABGapTime=120, phDownFeedAmount=5, nutrientRows=[exampleRow, exampleRow])
             nutrientTables.append(exampleTable)
             exampleTable2 = NutrientTable(
-                id=len(nutrientTables), name="standard2",nutrientFeedAmount=5, nutrientABGapTime=120, phDownFeedAmount=5, nutrientRows=[exampleRow, exampleRow])
+                id=len(nutrientTables), name="standard2", nutrientFeedAmount=5, nutrientABGapTime=120, phDownFeedAmount=5, nutrientRows=[exampleRow, exampleRow])
             nutrientTables.append(exampleTable2)
             saveResult = FileManager.SaveObjAsJson(
                 "nutrientTables.json", nutrientTables)
@@ -66,17 +67,18 @@ class NutrientManager(Repeatable):
         return self.activeTableID
 
     def ChangeActiveTable(self, activeTableID: int):
-        if activeTableID >= 0 and activeTableID < len(self.nutrientTables): 
+        if activeTableID >= 0 and activeTableID < len(self.nutrientTables):
             self.activeTableID = activeTableID
             self.Setup()
             return True
         return False
 
-    def CreateTable(self, tableName: str, nutrientFeedAmount:int, nutrientABGapTime:int, phDownFeedAmount:int):
-        newNutrientTable = NutrientTable(id=len(self.nutrientTables), name=tableName, nutrientFeedAmount=nutrientFeedAmount, nutrientABGapTime=nutrientABGapTime, phDownFeedAmount=phDownFeedAmount, nutrientRows=[])
+    def CreateTable(self, tableName: str, nutrientFeedAmount: int, nutrientABGapTime: int, phDownFeedAmount: int):
+        newNutrientTable = NutrientTable(id=len(self.nutrientTables), name=tableName, nutrientFeedAmount=nutrientFeedAmount,
+                                         nutrientABGapTime=nutrientABGapTime, phDownFeedAmount=phDownFeedAmount, nutrientRows=[])
         self.nutrientTables.append(newNutrientTable)
         saveResult = FileManager.SaveObjAsJson(
-                "nutrientTables.json", self.nutrientTables)
+            "nutrientTables.json", self.nutrientTables)
         return saveResult
 
     def RemoveTable(self, tableID: int):
@@ -87,7 +89,7 @@ class NutrientManager(Repeatable):
 
     def GetTable(self, tableID: int = None) -> NutrientTable:
         if tableID is None:
-            return ({"id": i.id, "name":i.name} for i in self.nutrientTables)
+            return ({"id": i.id, "name": i.name} for i in self.nutrientTables)
         if tableID >= 0 and tableID < len(self.nutrientTables):
             return self.nutrientTables[tableID]
 
@@ -117,10 +119,10 @@ class NutrientManager(Repeatable):
                 saveResult = FileManager.SaveObjAsJson(
                     "nutrientTables.json", self.nutrientTables)
                 return saveResult
-        
+
         return False
 
-    def Activate(self, activation : bool):
+    def Activate(self, activation: bool):
         self.activate = activation
         return True
 
@@ -138,29 +140,39 @@ class NutrientManager(Repeatable):
         print("INFO:    Adjusting Nutrient in progress..")
         if self.activate:
             activeTable = self.nutrientTables[self.activeTableID]
-            dayGap = (date.today() - self.startDate).days
-            #if current day still within day in table
-            if dayGap <= len(activeTable.nutrientRows):
+            # if table had any record (day)
+            if len(activeTable.nutrientRows) > 0:
+                dayGap = (date.today() - self.startDate).days
+                # if current day past last day in table, keep use last day setting
+                if dayGap >= len(activeTable.nutrientRows):
+                    dayGap = len(activeTable.nutrientRows) - 1
+
                 ph = phSensor.GetPH()
                 ec = tdsSensor.GetPPM(waterTempSensor.GetTemp())
-                if ph is -1 or ec is None:
-                    print("INFO:    Nutrient Sensor read fail.")
-                    return
-                
-                #fix ph too high
+                # if ph is -1 or ec is None:
+                #    print("INFO:    Nutrient Sensor read fail.")
+                #    return
+
+                # fix ph too high
                 if ph > activeTable.nutrientRows[dayGap].maxPH:
                     print("INFO:    Adjusting PH")
                     PHDownRelay.OnRate(activeTable.phDownFeedAmount)
-    
-                #fix ec too low
-                if ec < activeTable.nutrientRows[dayGap].minEC:
+
+                # fix ec too low
+                if True or ec < activeTable.nutrientRows[dayGap].minEC:
                     print("INFO:    Adjusting EC")
-                    #add nutrientA
-                    await nutrientARelay.OnRate(activeTable.nutrientFeedAmount)
-                    #wait few hour
-                    await asyncio.sleep(activeTable.nutrientABGapTime)
-                    #add nutrientB
-                    await nutrientBRelay.OnRate(activeTable.nutrientFeedAmount)
+                    # check if nutrientA is locked
+                    if nutrientARelay.enabled == True:
+                        # add nutrientA
+                        await nutrientARelay.OnRate(activeTable.nutrientFeedAmount)
+                        # lock nutrientA
+                        nutrientARelay.Disable()
+                        # wait few hour
+                        await asyncio.sleep(activeTable.nutrientABGapTime)
+                        # add nutrientB
+                        await nutrientBRelay.OnRate(activeTable.nutrientFeedAmount)
+                        # unlock nutrientA
+                        nutrientARelay.Enable()
 
     def AutoAdjustNutrient(self, scheduler: sched.scheduler, args: Tuple):
         return super().PeriodicTask(self.AdjustNutrient, self.adjustNutrientInterval, scheduler, args)

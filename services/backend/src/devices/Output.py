@@ -35,6 +35,7 @@ class Relay(Repeatable):
         self.isOn = False
         self.autoSaveInterval = autoSaveInterval
         self.ratePerSec = ratePerSec #0.65
+        self.enabled = True
 
         GPIO.setup(self.pin, GPIO.OUT)
         if (self.activeLOW is True):
@@ -43,6 +44,7 @@ class Relay(Repeatable):
             GPIO.output(self.pin, 0)
 
     def Setup(self):
+        self.enabled = True
         GPIO.setup(self.pin, GPIO.OUT)
         if (self.activeLOW is True):
             GPIO.output(self.pin, 1)
@@ -50,22 +52,23 @@ class Relay(Repeatable):
             GPIO.output(self.pin, 0)
         
     def ON(self):
-        self.isON = True
-        try:
-            if (self.activeLOW is True):
-                GPIO.output(self.pin, 0)
-            else:
-                GPIO.output(self.pin, 1)
-            
-        except RuntimeError:
-            self.Setup()
-            if (self.activeLOW is True):
-                GPIO.output(self.pin, 0)
-            else:
-                GPIO.output(self.pin, 1)
+        if self.enabled:
+          self.isON = True
+          try:
+              if (self.activeLOW is True):
+                  GPIO.output(self.pin, 0)
+              else:
+                  GPIO.output(self.pin, 1)
+              
+          except RuntimeError:
+              self.Setup()
+              if (self.activeLOW is True):
+                  GPIO.output(self.pin, 0)
+              else:
+                  GPIO.output(self.pin, 1)
 
     async def OnRate(self, amount, firebaseHandler:API.FirebaseHandler=None, number=None):
-        if self.isON == False:
+        if self.enabled and self.isON == False:
             if firebaseHandler is not None:
                 firebaseHandler.SendtoDB(f"relay-{number}", True)
             self.isON = True
@@ -77,19 +80,20 @@ class Relay(Repeatable):
             self.OFF()
 
     def OFF(self):
-        self.isON = False
-        try:
-            if (self.activeLOW is True):
-                GPIO.output(self.pin, 1)
-            else:
-                GPIO.output(self.pin, 0)
-            
-        except RuntimeError:
-            self.Setup()
-            if (self.activeLOW is True):
-                GPIO.output(self.pin, 1)
-            else:
-                GPIO.output(self.pin, 0)
+        if self.enabled:
+            self.isON = False
+            try:
+                if (self.activeLOW is True):
+                    GPIO.output(self.pin, 1)
+                else:
+                    GPIO.output(self.pin, 0)
+                
+            except RuntimeError:
+                self.Setup()
+                if (self.activeLOW is True):
+                    GPIO.output(self.pin, 1)
+                else:
+                    GPIO.output(self.pin, 0)
 
     def setState(self, state):
         GPIO.output(self.pin, state)
@@ -111,6 +115,12 @@ class Relay(Repeatable):
 
     def AutoSaveToDB(self, scheduler: sched.scheduler, args: Tuple):
         return super().PeriodicTask(self.SaveToDB, self.autoSaveInterval, scheduler, args)
+
+    def Disable(self):
+        self.enabled = False
+
+    def Enable(self):
+        self.enabled = True
 
 
 class RelayModel(BaseModel):
