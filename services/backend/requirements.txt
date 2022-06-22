@@ -1,6 +1,7 @@
 fastapi==0.68.0
 fastapi-utils
-uvicorn==0.14.0 #ASGI server for Fast api 
+#uvicorn==0.14.0 #ASGI server for Fast api 
+uvicorn[standard]==0.14.0 #ASGI server for Fast api 
 starlette #For Image stream 
 RPi.GPIO
 #imutils
