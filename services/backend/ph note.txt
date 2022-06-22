@@ -1,0 +1,2 @@
+sotrage: 3.55v
+liquid1: 

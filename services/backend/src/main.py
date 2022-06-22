@@ -1,83 +1,177 @@
 import dbm
 from typing import Optional
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException, Depends, WebSocket
 from fastapi_utils.tasks import repeat_every
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
 
-
+from datetime import date
 import time
 import sched
+import asyncio
 import threading
 import random
 import io
 import os
 from starlette.responses import StreamingResponse
+from sqlite3 import OperationalError
 import RPi.GPIO as GPIO
 
-from src import DBManager, FileManager
-
+from src import DBManager, FileManager, API, Nutrient
 from src.devices import Output, Sensor, CamHandler
 
 HOST_HOSTNAME = os.getenv('HOST_HOSTNAME')
 
-#tempData = []
-
 devices = FileManager.LoadObjFromJson("devices.json")
-#create device if no json file
+apis = FileManager.LoadObjFromJson("apis.json")
+nutrientManager = FileManager.LoadObjFromJson("nutrientManager.json")
+
+GPIO.cleanup()
+
+
+# create device if no json file
 if devices is None:
-    devices = {'output':{ 'relays': []},'sensor':{ 'adcs': [], 'switchs': []}}
+    print("Device config file not found, createing...")
+    devices = {'relays': [], 'sensor': {}}
 
-    #Test create device object. Should remove after Load/Save json is coded
-    pumpA = Output.Relay('Pump A', device_id=0, pin=17)
-    devices['output']['relays'].append(pumpA)
-    pumpB = Output.Relay('Pump B', device_id=1, pin=27)
-    devices['output']['relays'].append(pumpB)
-    
-    led = Output.Relay('led', device_id=2, pin=22)
-    devices['output']['relays'].append(led)
-    
-    adc = Sensor.ADS1115("adc A", device_id=0) # i2c pin, default address
-    devices['sensor']['adcs'].append(adc)
-    
-    waterLMSW = Sensor.Switch("Water LMSW", device_id=0, pin=18)
-    devices['sensor']['switchs'].append(waterLMSW)
-    waterLMSW2 = Sensor.Switch("Water LMSW222", device_id=1, pin=19)
-    devices['sensor']['switchs'].append(waterLMSW2)
-    waterLMSW3 = Sensor.Switch("Water LMSW3333333", device_id=2, pin=20)
-    devices['sensor']['switchs'].append(waterLMSW3)
-    
-    FileManager.SaveObjAsJson("devices.json", devices)
+    # Create Relay
+    relay1 = Output.Relay('Fertilizer-A', device_id=0,
+                          pin=24, ratePerSec=0.65, activeLOW=True)
+    relay2 = Output.Relay('Fertilizer-B', device_id=1,
+                          pin=17, ratePerSec=0.65, activeLOW=True)
+    relay3 = Output.Relay('PH-Down-Agent', device_id=2,
+                          pin=18, ratePerSec=0.65, activeLOW=True)
+    relay4 = Output.Relay('LED-1', device_id=3, pin=22, activeLOW=True)
+    relay5 = Output.Relay('LED-2', device_id=4, pin=5, activeLOW=True)
+    relay6 = Output.Relay('FAN-1', device_id=5, pin=6, activeLOW=True)
+    relay7 = Output.Relay('Pump-Add-Water', device_id=6,
+                          pin=13, activeLOW=True)
+    relay8 = Output.Relay('Pump-Cycle', device_id=7, pin=26, activeLOW=True)
 
-#do background save sensor data to DB
+    devices['relays'] = [relay1, relay2, relay3,
+                         relay4, relay5, relay6, relay7, relay8]
+    devices['sensor']['switchs'] = Sensor.Switch(
+        "Water-LMSW", device_id=0, pin=18)
+
+    devices['sensor']['water-temp'] = Sensor.TempSensor(
+        "water-temp", 0, 4, "00-780000000000")
+
+    # Create i2c device (ADS1115 and SHT31)
+    devices['sensor']['adc'] = Sensor.ADS1115(
+        "ADC", device_id=0)  # i2c pin, default address
+
+    devices['sensor']['sht31'] = Sensor.SHT31("air-indoor", 0)
+
+    # Create Analog device if adc is connected
+    if 'adc' in devices['sensor']:
+        devices['sensor']['ph'] = Sensor.PHSensor(
+            "ph", 0, devices['sensor']['adc'], 0)
+        devices['sensor']['tds'] = Sensor.TDSSensor(
+            "tds", 0, devices['sensor']['adc'], 2)
+
+    saveResult = FileManager.SaveObjAsJson("devices.json", devices)
+    print(f"Devices created: {saveResult}")
+
+else:
+    for relay in devices['relays']:
+        relay.Setup()
+
+    if 'water-temp' in devices['sensor']:
+        devices['sensor']['water-temp'].Setup()
+
+    if 'adc' in devices['sensor']:
+        devices['sensor']['adc'].Setup()
+    if 'sht31' in devices['sensor']:
+        devices['sensor']['sht31'].Setup()
+    if 'switchs' in devices['sensor']:
+        devices['sensor']['switchs'].Setup()
+
+    print(f"Devices loaded")
+
+# create api if no json file
+if apis is None:
+    apis = {}
+    allowedDataName = ["switchs", "temp", "humid", "ph", "water-temp", "tds"]
+    for i in range(8):
+        allowedDataName.append(f"relay-{i}")
+    apis['cloud'] = API.FirebaseHandler(allowedDataName)
+
+    saveResult = FileManager.SaveObjAsJson("apis.json", apis)
+    print(f"Apis created: {saveResult}")
+
+else:
+    apis['cloud'].Setup()
+    print(f"Apis loaded")
+
+
+if nutrientManager is None:
+    nutrientManager = Nutrient.NutrientManager(0)
+
+    saveResult = FileManager.SaveObjAsJson(
+        "nutrientManager.json", nutrientManager)
+    print(f"NutrientManager created: {saveResult}")
+
+else:
+    nutrientManager.Setup()
+    print("nutrientManager loaded")
+
+# do background save sensor data to DB
+dbThread = DBManager.SqlLite("Sensor_history")
+scheduler = sched.scheduler(time.time, time.sleep)
+
+
 def Background_DBAutoSave():
-    #Test wirte to database. should removed after Auto-save sensor function is coded
-    dbThread = DBManager.SqlLite("Sensor_history")
-    dbThread.CreateDataTable("Garden_A_Sensor", ["Temp", "Humid", "PH", "EC", "Water_Temp", "Water_LMSW"])
-    dbThread.CreateDataTable("Garden_A_Output", ["Pump_A", "Pump_B", "LED"])
-    #test add new record
-    dbThread.Append("Garden_A_Sensor", [25, 50, 6.2, 2.22, 28, 0])
+    #dbThread = DBManager.SqlLite("Sensor_history")
 
-    #init scheduler
-    scheduler = sched.scheduler(time.time, time.sleep)
-    devices['sensor']['switchs'][0].PeriodicSaveToDB(1, scheduler, (dbThread,))
-    devices['sensor']['switchs'][1].PeriodicSaveToDB(5, scheduler, (dbThread,))
-    devices['sensor']['switchs'][2].PeriodicSaveToDB(10, scheduler, (dbThread,))
-    #devices['EC sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
-    #devices['PH sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
-    #devices['Light sensor'][0].PeriodicSaveToDB(1, scheduler, (db,))
-    #devices['Water level'][0].PeriodicSaveToDB(1, scheduler, (db,))
-    
-    scheduler.run()
+    # init scheduler
+    #scheduler = sched.scheduler(time.time, time.sleep)
+    apis['cloud'].AutoRefreshToken(scheduler)
+
+    if 'switchs' in devices['sensor']:
+        devices['sensor']['switchs'].AutoSaveToDB(scheduler, (dbThread,))
+        #apis['cloud'].AutoSendToDB(
+        #    scheduler, ("switchs", devices['sensor']['switchs'].getState()))
+    if 'sht31' in devices['sensor']:
+        devices['sensor']['sht31'].AutoSaveToDB(scheduler, (dbThread,))
+        apis['cloud'].AutoSendToDB(
+            scheduler, ("temp", devices['sensor']['sht31'].Get_temp()))
+        apis['cloud'].AutoSendToDB(
+            scheduler, ("humid", devices['sensor']['sht31'].Get_Humid()))
+    if 'ph' in devices['sensor']:
+        devices['sensor']['ph'].AutoSaveToDB(scheduler, (dbThread,))
+        apis['cloud'].AutoSendToDB(
+            scheduler, ("ph", devices['sensor']['ph'].GetPH()))
+    if 'water-temp' in devices['sensor']:
+        devices['sensor']['water-temp'].AutoSaveToDB(scheduler, (dbThread,))
+        #apis['cloud'].AutoSendToDB(
+        #    scheduler, ("water-temp", devices['sensor']['water-temp'].GetTemp()))
+    if 'tds' in devices['sensor']:
+        devices['sensor']['tds'].AutoSaveToDB(
+            scheduler, (dbThread, devices['sensor']['water-temp']))
+        apis['cloud'].AutoSendToDB(
+            scheduler, ("tds", devices['sensor']['tds'].GetPPM(devices['sensor']['water-temp'].GetTemp())))
+
+    #for i, relay in enumerate(devices['relays']):
+    #    relay.AutoSaveToDB(scheduler, (dbThread,))
+    #    apis['cloud'].AutoSendToDB(scheduler, (f"relay-{i}", relay.getState()))
+
+    apis['cloud'].AutoSendtoStorage(scheduler, ("camera.jpg", CamHandler.GetImage()))
+
+    nutrientManager.AutoAdjustNutrient(scheduler, (devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds'], devices['sensor']['water-temp']))
+
+    # scheduler.run()
+
 
 # Start a thread to run the events
-t1 = threading.Thread(target=Background_DBAutoSave)
+Background_DBAutoSave()
+t1 = threading.Thread(target=scheduler.run)
+t1.setDaemon(True)
 t1.start()
 
 db = DBManager.SqlLite("Sensor_history")
 
-#init Fastapi
+# init Fastapi
 app = FastAPI()
+
 
 origins = [
     "http://pi-zero.local:8080",
@@ -87,104 +181,264 @@ origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins= [f"http://{HOST_HOSTNAME}.local:8080"],
+    allow_origins=[f"http://{HOST_HOSTNAME}.local:8080"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-#Main Fastapi 
+# Main Fastapi
+
+
 @app.get("/")
 async def home():
     return {"Hello": "World"}
 
-@app.get("/manager")
-async def device_manager():
-    return {"Hello": "ssss"}
 
-#@app.get("/pump/add", )
-#def pumpA_pow(new_pump: Output.Relay):
-#    ## %Todo Add dynamic create new pump
-#    return {"status":"Pump xxx added", "new_pump":new_pump.name}
+# @app.get("/manager")
+# async def device_manager():
+#     return {"Hello": "ssss"}
 
-#Get request
+
 @app.get("/relay")
 async def get_relays():
-    return{"Relays":devices['output']['relays']}
+    return{"Relays": devices['relays']}
+
 
 @app.get("/relay/{number}")
 async def pump_state(number: int):
     try:
-        return {devices['output']['relays'][number]}
+        return {devices['relays'][number]}
     except IndexError:
-        raise HTTPException(status_code=404, detail="Item not found")
+        return {"status": "Error", "detail": "Device not found."}
+
+
+@app.put("/relay/{number}")
+async def edit_relay(number: int, new_relay: Output.RelayModel):
+    if len(devices['relays']) >= number:
+        new_relay = Output.Relay(
+            new_relay, devices['relays'][number].device_id, devices['relays'][number].pin)
+
+        devices['relays'][number] = new_relay
+        FileManager.SaveObjAsJson("devices.json", devices)
+        return {"status": "ok", "detail": new_relay}
+    else:
+        return {"status": "Error", "detail": f"Relay ID {number} does not exist."}
+
 
 @app.get("/relay/{number}/{power}")
 async def relay_control(number: int, power: bool):
     try:
-        #Pumps code
+        # Pumps code
         if power:
-            devices['output']['relays'][number].ON()
+            devices['relays'][number].ON()
+            apis['cloud'].SendtoDB(f"relay-{number}", True)
         else:
-            devices['output']['relays'][number].OFF()
-        return {devices['output']['relays'][number].name: power}
+            devices['relays'][number].OFF()
+            apis['cloud'].SendtoDB(f"relay-{number}", False)
+        return {"status": power}
     except IndexError:
-        raise HTTPException(status_code=404, detail="Item not found")
+        return {"status": "Error", "detail": "Device not found."}
 
-@app.get("/switch/{number}")
-async def switch_state(number: int):
+
+@app.get("/relay/on_by_rate/{number}/{amount}")
+async def relay_control_by_amount(number: int, amount: int):
     try:
-        return {"name":devices['sensor']['switchs'][number].name, "value":devices['sensor']['switchs'][number].getState == 0}
+        await devices['relays'][number].OnRate(amount, apis['cloud'], number)
+        return {devices['relays'][number].name: amount}
     except IndexError:
-        raise HTTPException(status_code=404, detail="Item not found")
+        return {"status": "Error", "detail": "Device not found."}
+
+
+@app.get("/switch")
+async def switch_state():
+    try:
+        return {"name": devices['sensor']['switchs'].name, "value": devices['sensor']['switchs'].getState() == 0}
+    except IndexError:
+        return {"status": "Error", "detail": "Device not found."}
+
+    except KeyError:
+        return {"status": "Error", "detail": "Device not setup."}
+
 
 @app.get("/sensor/temp")
 async def get_temp():
-    return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
+    try:
+        temp = devices['sensor']['sht31'].Get_temp()
+        humid = devices['sensor']['sht31'].Get_Humid()
+        return {"temp": temp, "humid": humid}
+    except IndexError:
+        return {"status": "Error", "detail": "Device is not connected."}
 
-@app.get("/sensor/temp/raw")
-async def get_temp_raw():
-    return {"temp": round(random.uniform(26, 27), 1), "humid": random.randrange(50, 60)}
+    except KeyError:
+        return {"status": "Error", "detail": "Device is not setup."}
+
 
 @app.get("/sensor/water_temp")
 async def get_water_temp():
-    return {"temp": round(random.uniform(25, 26), 1)}
+    return {"water_temp": devices['sensor']['water-temp'].GetTemp()}
+
 
 @app.get("/sensor/ph")
-async def get_ph():
-    return {"ph": round(random.uniform(6.0, 7.0), 2)}
+async def get_ph(reset: bool = None, calibrate: bool = None, refPH: float = None):
+    if calibrate is not None and refPH is not None:
+        result = devices['sensor']['ph'].AddCalibratePoint(refPH)
+        FileManager.SaveObjAsJson("devices.json", devices)
+        if result:
+            return {"status": "ok"}
+        else:
+            return {"status": "error"}
+    elif reset is not None:
+        devices['sensor']['ph'].ResetCalibratePoint()
+        FileManager.SaveObjAsJson("devices.json", devices)
+        return {"status": "ok"}
+    else:
+        return {"ph": devices['sensor']['ph'].GetPH()}
 
-@app.get("/sensor/ec")
-async def get_ec():
-    return {"ec": round(random.uniform(1.6, 1.9), 2), "unit": "(dS/m)"} #dS/m
 
+@app.get("/sensor/tds")
+async def get_tds(getVoltage: bool = None):
+    if getVoltage is None:
+        tds = devices['sensor']['tds'].GetPPM(
+            devices['sensor']['water-temp'].GetTemp())
+        ec = (tds * 2)
+        return {"tds": tds, "unit-tds": "ppm", "ec": ec, "unit-ec": "uS/cm"}
+    else:
+        return {"voltage": devices['sensor']['tds'].getVoltage()}
+
+@app.get("/nutrient/data")
+async def get_nutrient_tables():
+    return nutrientManager.GetTable()
+
+@app.post("/nutrient/data")
+async def create_nutrient_table(tableName: str, nutrientFeedAmount:int, nutrientABGapTime:int, phDownFeedAmount:int):
+    return nutrientManager.CreateTable(tableName,nutrientFeedAmount,nutrientABGapTime,phDownFeedAmount)
+
+@app.get("/nutrient/data/{nutrientTableID}")
+async def get_nutrient_table(nutrientTableID: int):
+    return nutrientManager.GetTable(nutrientTableID)
+
+@app.delete("/nutrient/data/{nutrientTableID}")
+async def remove_nutrient_table(nutrientTableID: int):
+    return nutrientManager.RemoveTable(nutrientTableID)
+
+@app.post("/nutrient/data/{nutrientTableID}/row")
+async def append_nutrient_row(nutrientTableID: int, newNutrientRow: Nutrient.NutrientRow):
+    return nutrientManager.AddTableRow(nutrientTableID, newNutrientRow)
+
+@app.put("/nutrient/data/{nutrientTableID}/row")
+async def edit_nutrient_row(nutrientTableID: int, row:int, newNutrientRow: Nutrient.NutrientRow):
+    return nutrientManager.EditTableRow(nutrientTableID, row, newNutrientRow)
+
+@app.delete("/nutrient/data/{nutrientTableID}/row")
+async def remove_nutrient_row(nutrientTableID: int, row: int):
+    return nutrientManager.RemoveTableRow(nutrientTableID, row)
+
+@app.get("/nutrient/manage")
+async def manage_nutrient_manager(newActiveTable: int = None, getActiveTableID: bool = None, getActivation: bool = None, setActivation: bool = None, getStartDate: bool = None, newStartDate: date = None, forceAdjustNutrient: bool = None):
+    if newActiveTable is not None:
+        return {"result ": nutrientManager.ChangeActiveTable(newActiveTable)}
+
+    if getActiveTableID:
+        return {"id": nutrientManager.getActiveTableID()}
+
+    if getActivation:
+        return nutrientManager.GetActivation()
+
+    if setActivation:
+        return nutrientManager.Activate(setActivation)
+
+    if getStartDate:
+        return nutrientManager.GetSrartDate()
+    
+    if newStartDate is not None:
+        return nutrientManager.SetStartDate(newStartDate)
+
+    if forceAdjustNutrient is not None:
+        return await nutrientManager.AdjustNutrient(devices['relays'][0], devices['relays'][1], devices['relays'][2], devices['sensor']['ph'], devices['sensor']['tds'], devices['sensor']['water-temp'])
+    
 @app.get("/cam")
-async def get_image():
-    live_img = CamHandler.GetImage(180)
+async def get_image(rotate:int = None, forceSendToCloud:bool = None):
+    live_img = CamHandler.GetImage(rotate)
     if live_img is None:
-        raise HTTPException(status_code=404, detail="Camera not found")
+        return {"status": "Error", "detail": "Device not found."}
+    
+    if forceSendToCloud is not None:
+        apis['cloud'].SendtoStorage("camera.jpg", CamHandler.GetImage())
+        return {"status": "ok"}
     return StreamingResponse(io.BytesIO(live_img.tobytes()), media_type="image/jpg")
+
 
 @app.get("/data")
 async def get_record_tables():
     return db.GetRecords()
 
-@app.get("/data/{dataTableName}")
-async def get_records(dataTableName: str):
-    return db.GetRecords(dataTableName)
 
-#Post request
-@app.post("/relay")
-async def add_relay(new_relay : Output.Relay = Depends()):
-    #<todo> Add new relay to device list, then save it to json file
-    #check if device-id and pin of new device in not duplicate
-    if not any(saved_relay.device_id == new_relay.device_id for saved_relay in devices['output']['relays'])\
-    and not any(saved_relay.pin == new_relay.pin for saved_relay in devices['output']['relays']):
-      devices['output']['relays'].append(new_relay)
-      FileManager.SaveObjAsJson("devices.json", devices)
-      return {"status": "ok", "new_device": new_relay}
+@app.get("/data/{dataTableName}")
+async def get_records(dataTableName: str, limit: int = -1):
+    try:
+        return db.GetRecords(dataTableName, limit)
+    except OperationalError as e:
+        return {"status": "Error", "detail": str(e)}
+
+
+@app.get("/cloud/status")
+async def cloud_status():
+    return {"verified": apis['cloud'].isActivated}
+
+
+@app.get("/cloud/setup")
+async def cloud_setup(verified: bool = None) -> dict:
+    if not verified:
+        requestVerifyData = apis['cloud'].RequestVerifyDevice()
+        return requestVerifyData
+
     else:
-        if any(saved_relay.device_id == new_relay.device_id for saved_relay in devices['output']['relays']):
-          return {"status": "Error. Duplicate device_id, try another"}
-        else:
-          return {"status": "Error. Duplicate GPIO pin, try another"}
+        verifyCompleated = apis['cloud'].VerifyDevice()
+        if verifyCompleated:
+            saveResult = FileManager.SaveObjAsJson("apis.json", apis)
+        return {"result": verifyCompleated}
+
+
+# Websocket test
+#@app.websocket("/ws")
+#async def websocket_endpoint(websocket: WebSocket):
+#    await websocket.accept()
+#    data = await websocket.receive_text()
+#    await websocket.send_json({"got": data})
+#    if data == "temp":
+#        try:
+#            while True:
+#                await websocket.send_json({"temp": devices['sensor']['sht31'].Get_temp()})
+#                await asyncio.sleep(5)
+#        except IndexError:
+#            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+#
+#    elif data == "humid":
+#        try:
+#            while True:
+#                await websocket.send_json({"humid": devices['sensor']['sht31'].Get_Humid()})
+#                await asyncio.sleep(5)
+#        except IndexError:
+#            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+#
+#    elif data == "ph":
+#        try:
+#            while True:
+#                await websocket.send_json({"ph": devices['sensor']['ph'].GetPH()})
+#                await asyncio.sleep(1)
+#        except IndexError:
+#            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+#
+#    elif data == "tds":
+#        try:
+#            while True:
+#                tds = devices['sensor']['tds'].GetPPM(
+#                    devices['sensor']['water-temp'].GetTemp())
+#                ec = (tds * 2)
+#                await websocket.send_json({"tds": tds, "unit-tds": "ppm", "ec": ec, "unit-ec": "uS/cm"})
+#                await asyncio.sleep(1)
+#        except IndexError:
+#            await websocket.send_json({"status": "Error", "detail": "Device is not connected."})
+#    else:
+#        await websocket.send_json({"status": "Error", "detail": "No data."})

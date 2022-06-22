@@ -1,7 +1,7 @@
 import json
 import jsonpickle
 
-def LoadObjFromJson(filename, useJsonPickle= True):
+def LoadObjFromJson(filename:str, useJsonPickle= True):
     try:
         with open("./Config/" + filename, 'r') as file_object:
             if useJsonPickle:
@@ -14,7 +14,7 @@ def LoadObjFromJson(filename, useJsonPickle= True):
     except FileNotFoundError:
         return None
 
-def SaveObjAsJson(filename, targetObj, useJsonPickle= True):
+def SaveObjAsJson(filename:str, targetObj, useJsonPickle= True):
     try:
         with open("./Config/" + filename, 'w') as file_object:
             if useJsonPickle:
@@ -23,6 +23,5 @@ def SaveObjAsJson(filename, targetObj, useJsonPickle= True):
             else:
                 json.dump(targetObj, file_object, indent=4)
         return True 
-
-    except:
-        return False
+    except Exception as e:
+        return str(e)

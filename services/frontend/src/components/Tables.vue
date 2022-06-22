@@ -4,46 +4,103 @@
       <mdb-col md="12">
         <mdb-card cascade narrow class="mt-5">
           <mdb-view class="gradient-card-header blue darken-2">
-            <h4 class="h4-responsive text-white">Basic tables</h4>
-          </mdb-view>
-          <mdb-card-body>
-            <h3 class="mt-5 text-left"><strong>AB Table</strong></h3>
-            <p>Using for fertilizer setup.</p>
-            <mdb-tbl>
-              <thead>
-                <tr><th>Day</th><th>A</th><th>B</th><th>A Interval</th><th>B Interval</th><th>Mode</th></tr>
-              </thead><tbody>
-                <tr><th scope="row">1</th><td>10 g</td><td>20 g</td><td>10 min</td><td>10 min</td><td>Force Auto</td></tr><tr><th scope="row">2</th><td>10 g</td><td>20 g</td><td>10 min</td><td>10 min</td><td>Force Auto</td></tr><tr><th scope="row">3</th><td>10 g</td><td>20 g</td><td>10 min</td><td>10 min</td><td>Force Auto</td></tr>
-              </tbody>
-            </mdb-tbl>
-            <!-- <h3 class="mt-5 text-left"><strong>Table head options</strong></h3>
-            <p>To change a background-color of thead (or any other element) use our color classes. If you are going to use a dark background you should also consider white text (to provide a proper contrast) by adding .text-white class. </p>
-            <mdb-tbl>
-              <thead class="blue-grey lighten-4">
-                <tr><th>#</th><th>First Name</th><th>Last Name</th><th>Username</th></tr>
-              </thead>
-              <tbody>
-                <tr><th scope="row">1</th><td>Mark</td><td>Otto</td><td>@mdo</td></tr><tr><th scope="row">2</th><td>Jacob</td><td>Thornton</td><td>@fat</td></tr><tr><th scope="row">3</th><td>Larry</td><td>the Bird</td><td>@twitter</td></tr>
-              </tbody>
-            </mdb-tbl>
-            <mdb-tbl>
-              <thead class="mdb-color darken-3">
-                <tr class="text-white"><th>#</th><th>First Name</th><th>Last Name</th><th>Username</th></tr>
-              </thead>
-              <tbody>
-                <tr><th scope="row">1</th><td>Mark</td><td>Otto</td><td>@mdo</td></tr><tr><th scope="row">2</th><td>Jacob</td><td>Thornton</td><td>@fat</td></tr><tr><th scope="row">3</th><td>Larry</td><td>the Bird</td><td>@twitter</td></tr>
-              </tbody>
-            </mdb-tbl>
-            <h3 class="mt-5 text-left"><strong>Striped rows:</strong></h3>
-            <table class="table table-striped">
-              <thead>
-                <tr><th>#</th><th>First Name</th><th>Last Name</th><th>Username</th></tr>
-              </thead>
-              <tbody>
-                <tr><th scope="row">1</th><td>Mark</td><td>Otto</td><td>@mdo</td></tr><tr><th scope="row">2</th><td>Jacob</td><td>Thornton</td><td>@fat</td></tr><tr><th scope="row">3</th><td>Larry</td><td>the Bird</td><td>@twitter</td></tr>
-              </tbody>
-            </table> -->
-          </mdb-card-body>
+            Nutrient Table</mdb-view
+          >
+
+          <mdb-row>
+            <mdb-col col="4" style="margin-top: 10px"
+              ><mdb-btn block color="primary"  @click="postTable0()" style="margin-left: 10px"
+                ><mdb-icon class="mr-1" icon="plus" />Add Day</mdb-btn
+              ></mdb-col
+            >
+            <mdb-col col="4">
+              <mdb-input
+                type="number"
+                :min="0"
+                :max="10"
+                v-model="number_EC"
+                placeholder="EC"
+                outline
+              />
+            </mdb-col>
+            <mdb-col col="4">
+              <mdb-input
+                type="number"
+                :min="0"
+                :max="10"
+                v-model="number_pH"
+                placeholder="PH"
+                style="margin-right: 10px"
+                outline
+              />
+            </mdb-col>
+          </mdb-row>
+
+          <mdb-row>
+            <mdb-col col="3" style="margin-top: 10px"
+              ><mdb-btn block color="amber" @click="editTable0(number_Day-1), getTable()" style="margin-left: 10px"
+                ><mdb-icon class="mr-1" icon="pen" />Edit Day</mdb-btn
+              ></mdb-col
+            >
+            <mdb-col col="3">
+              <mdb-input
+                type="number"
+                :min="0"
+                :max="10"
+                v-model="number_Day"
+                placeholder="Day"
+                outline
+              />
+            </mdb-col>
+            <mdb-col col="3">
+              <mdb-input
+                type="number"
+                :min="0"
+                :max="10"
+                v-model="number_EC"
+                placeholder="EC"
+                outline
+              />
+            </mdb-col>
+            <mdb-col col="3">
+              <mdb-input
+                type="number"
+                :min="0"
+                :max="10"
+                v-model="number_pH"
+                placeholder="PH"
+                style="margin-right: 10px"
+                outline
+              />
+            </mdb-col>
+          </mdb-row>
+          <table class="table table-striped table-bordered">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>EC</th>
+                <th>pH</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="(nutrientRows,
+                nutrientRowsID) in nutrientTable.nutrientRows"
+                :key="nutrientRows.id"
+              >
+                <td>{{ nutrientRows.day }}</td>
+                <td>{{ nutrientRows.minEC }}</td>
+                <td>{{ nutrientRows.maxPH }}</td>
+                <mdb-btn
+                  size="sm"
+                  color="danger"
+                  @click="deleteTableRow0(nutrientRowsID)"
+                  style="margin-right: -100px"
+                  ><mdb-icon class="mr-1" icon="backspace" /> Remove</mdb-btn
+                >
+              </tr>
+            </tbody>
+          </table>
         </mdb-card>
       </mdb-col>
     </mdb-row>
@@ -51,22 +108,90 @@
 </template>
 
 <script>
-import { mdbRow, mdbCol, mdbCard, mdbView, mdbCardBody, mdbTbl } from 'mdbvue'
-
+import {
+  mdbRow,
+  mdbCol,
+  mdbCard,
+  mdbView,
+  mdbInput,
+  mdbBtn,
+  mdbIcon,
+} from "mdbvue";
+import axios from "axios";
 export default {
-  name: 'Tables',
+  name: "Tables",
   components: {
     mdbRow,
     mdbCol,
     mdbCard,
     mdbView,
-    mdbCardBody,
-    mdbTbl
+    mdbInput,
+    mdbBtn,
+    mdbIcon,
+    // mdbCardBody,
+    //mdbTbl,
   },
-  data () {
-    return {}
-  }
-}
+  data() {
+    return {
+      nutrientTable: {},
+      number_pH: "",
+      number_EC: "",
+      number_Day: "",
+    };
+  },
+  methods: {
+    getTable() {
+      axios.get("/nutrient/data/0").then((res) => {
+        //this.nutrientTable = res.data;
+        this.nutrientTable = res.data;
+        //this.data.rows = this.nutrientTable
+      });
+    },
+    postTable0() {
+      axios
+        .post(
+          "/nutrient/data/0/row",
+          { minEC: this.number_EC, maxPH: this.number_pH },
+          {
+            headers: {
+              Authorization: "",
+              "Content-Type": "application/json",
+            },
+          }
+        )
+    },
+    deleteTableRow0(row) {
+      axios.delete(`/nutrient/data/0/row?row=${row}`).then(this.getTable());
+    },
+    editTable0(row) {
+      axios
+        .put(
+          `/nutrient/data/0/row?row=${row}`,
+          { minEC: this.number_EC, maxPH: this.number_pH },
+          {
+            headers: {
+              Authorization: "",
+              "Content-Type": "application/json",
+            },
+          }
+        )
+        .then(this.getTable());
+    },
+  },
+  created() {
+    this.getTable();
+  },
+  watch: {
+    nutrientTable(newData) {
+      const updatedData = this.data;
+      for (let i = 0; i < newData.nutrientRows.length; i++) {
+        newData.nutrientRows[i].day = i + 1;
+      }
+      updatedData.rows = newData.nutrientRows;
+      this.data = { ...updatedData };
+    },
+  },
+};
 </script>
 
 <!-- Add "scoped" attribute to limit CSS to this component only -->
