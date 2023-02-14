@@ -2,7 +2,7 @@ fastapi==0.75.0
 fastapi-utils==0.2.1 
 #uvicorn==0.17.6  #ASGI server for Fast api 
 uvicorn[standard]==0.17.6 
-starlette==0.17.1  #For Image stream 
+starlette==0.25.0  #For Image stream 
 RPi.GPIO==0.7.1
 #numpy==1.22.3 #installed with apt-get
 #adafruit-ads1x15==1.0.2 # DEPRECATED
